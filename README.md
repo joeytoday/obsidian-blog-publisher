@@ -1,212 +1,138 @@
-# 🏡 Obsidian Digital Garden
+# 📝 Obsidian Blog Publisher
 
-[![Downloads](https://img.shields.io/github/downloads/oleeskild/obsidian-digital-garden/total?color=blue)](https://github.com/oleeskild/obsidian-digital-garden/releases)
-[![Discord](https://img.shields.io/discord/1154324140313018429?color=7289da&label=discord)](https://discord.gg/UsPH74nEVS)
-[![GitHub stars](https://img.shields.io/github/stars/oleeskild/obsidian-digital-garden?style=social)](https://github.com/oleeskild/obsidian-digital-garden)
+个人使用的 Obsidian 博客发布插件。基于 [Obsidian Digital Garden](https://github.com/oleeskild/obsidian-digital-garden) 修改而来。
 
-Turn your Obsidian vault into a beautiful website. Free, open-source, and entirely yours.
+> ⚠️ **仅供个人使用** — 此插件为个人博客发布工作流定制，不对外公开维护。
 
-![image](https://github.com/user-attachments/assets/8343d716-cf30-48d0-b5a5-8eda980e25bd)
+## 功能特性
 
+### 📝 内容支持
+- 基础 Markdown 语法
+- 笔记间链接
+- Dataview 查询（代码块、行内和 DataviewJS）
+- Canvas
+- 笔记嵌入/引用
+- Excalidraw 绘图嵌入
+- 图片嵌入
+- PDF 嵌入（最大 20MB，内联渲染）
+- Callouts/Admonitions
+- 代码块
+- MathJax 数学公式
+- 高亮文本
+- 脚注
+- Mermaid 图表
+- PlantUML 图表
 
-## 📚 Documentation
+### 🧭 导航与发现
+- 实时搜索预览
+- 文件树导航
+- 反向链接
+- 局部关系图
+- 全局关系图
+- 目录
+- 悬停链接预览
 
-**[dg-docs.ole.dev](https://dg-docs.ole.dev/)** — Full setup guide, configuration options, and examples.
+### 🎨 自定义
+- Obsidian 主题支持
+- Style Settings 插件支持
+- CSS 变量自定义样式
+- 自定义过滤器（基于正则的内容转换）
+- 笔记图标
+- 时间戳（创建/更新）
+- 自定义 UI 文本
 
-## Why a Digital Garden?
+### 🔒 隐私控制
+- **选择性发布** — 仅明确标记 `dg-publish: true` 的笔记会被发布
+- **无意外泄露** — 链接的笔记不会自动发布
+- **完全控制** — 私有笔记保持私有
 
-Unlike a blog, a digital garden is a living collection of ideas—notes that grow and connect over time. This plugin lets you selectively share your thinking while keeping private notes private. No monthly fees. Just your ideas, your way.
+## 快速开始
 
-> 🔒 **Your private notes stay private.** Only notes you explicitly mark with `dg-publish: true` ever leave your vault.
+### 前置要求
+1. GitHub 账号
+2. Vercel 账号（或其他托管平台）
 
-Check out [gardens built by the community](https://vaults.obsidian-community.com/) for inspiration.
+### 设置步骤
 
-## Features
+1. **部署网站模板**
+   - 访问 [digitalgarden 仓库](https://github.com/oleeskild/digitalgarden)
+   - 点击 "Deploy to Vercel" 按钮
+   - 按提示完成部署
 
-### 📝 Content Support
--   Basic Markdown Syntax
--   Links to other notes
--   Dataview queries (as codeblocks, inline and dataviewjs)
--   Canvas
--   Transcluded/embedded notes
--   Embedded/Transcluded Excalidraw drawings
--   Embedded/Transcluded Images
--   Embedded PDFs (up to 20MB, rendered inline)
--   Callouts/Admonitions
--   Code Blocks
--   MathJax
--   Highlighted text
--   Footnotes
--   Mermaid diagrams
--   PlantUML diagrams
+2. **创建 GitHub Access Token**
+   - 访问 [Fine-grained token 设置页](https://github.com/settings/personal-access-tokens/new)
+   - 配置权限：
+     - Resource owner: 自己
+     - 仅选择你的花园仓库
+     - Permissions:
+       - Contents: `Read and write`
+       - Pull requests: `Read and write`
+   - 生成并复制 Token
 
-### 🧭 Navigation & Discovery
--   Fast search with live preview
--   Filetree navigation
--   Backlinks
--   Local graph
--   Global graph
--   Table of contents
--   Link previews on hover
+3. **配置插件**
+   - 在 Obsidian 设置中找到 "Blog Publisher"
+   - 填写：
+     - GitHub 用户名
+     - 仓库名称
+     - Access Token
 
-### 🎨 Customization
--   Obsidian Themes
--   Style Settings plugin support
--   Customizable via CSS variables
--   Custom filters (regex-based content transformation)
--   Note icons
--   Timestamps (created/updated)
--   Customizable UI text (search placeholders, backlink headers, etc.)
+4. **发布笔记**
+   - 在笔记 Frontmatter 中添加：
+   ```yaml
+   ---
+   dg-home: true
+   dg-publish: true
+   ---
+   ```
+   - 使用命令面板执行 "Blog Publisher: Publish Single Note"
 
-### 🔒 Privacy & Control
--   **Selective publishing** - Only notes explicitly marked with `dg-publish: true` are published
--   **No accidental leaks** - Linked notes are never auto-published; you decide what goes public
--   **Full control** - Your private notes stay private until you choose to share them
+## 本地开发
 
-### ☁️ Hosting Options
--   **Vercel** - One-click deploy, automatic builds
--   **Netlify** - Alternative hosting with similar features
--   **[Forestry.md](https://forestry.md)** - Managed hosting for non-technical users (no GitHub setup required)
+```bash
+# 克隆仓库
+git clone <repository-url>
 
-## Initial Setup
+# 安装依赖
+npm install
 
-**⏱️ ~10 minutes to set up.** It takes a bit of work, but when you're done you'll have a digital garden in which you are in control of every part of it, and can customize it as you see fit. Which is what makes digital gardens so delightful.
+# 开发模式
+npm run dev
 
-> 💡 **Want a simpler setup?** [Forestry.md](https://forestry.md) offers one-click hosting with no GitHub required. Currently in invite-only alpha.
+# 构建
+npm run build
 
-Lets get started:
+# 运行测试
+npm test
 
-1. First off, you will need a GitHub account. If you don't have this, create one [here](https://github.com/signup).
-2. You'll also need a Vercel account. You can sign up using your GitHub account [here](https://vercel.com/signup)
-3. Open [this repo](https://github.com/oleeskild/digitalgarden), and click the blue "Deploy to Vercel" button. This will open Vercel which in turn will create a copy of this repository in your GitHub accont. Give it a fitting name like 'my-digital-garden'. Follow the steps to publish your site to the internet.
-4. Now you need to create an access token so that the plugin can add new notes to the repo on your behalf. Detailed instructions with images are available in the [docs](https://dg-docs.ole.dev/advanced/fine-grained-access-token/). Use a [Fine grained personal access token](https://github.com/settings/personal-access-tokens/new) with the following settings:
-		- Token Name:  _`YYYY-Digital Garden`_
-		- Expiration: _Custom / a year / whatever you want._
-		- Description: _Publishing content to the digital garden._
-		- Resource owner: _yourself_
-		- Only select repositories: _Select your garden repo_
-		- Permissions (just two needed): 
-			- Contents: `Access: Read and write`
-			- Pull requests: `Access: Read and write`
-Click the "Generate token" button, and copy the token you are presented with on the next page.
-5. In Obsidian open the setting menu and find the settings for "Digital Garden". The top three settings here is required for the plugin to work.
-   Fill in your GitHub username, the name of the repo with your notes which you created in step 3. Lastly paste the token you created in step 4. The other options are optional. You can leave them as is.
-6. Now, let's publish your first note! Create a new note in Obsidian. And add the following to the top of your file
-
+# 代码检查
+npm run lint
+npm run format
 ```
----
-dg-home: true
-dg-publish: true
----
-```
 
-(If you get backticks, \`\`\`, at the start and beginning when copy-pasting the above text, delete those. It should start and end with a triple dash, ---. See [this page](https://help.obsidian.md/Advanced+topics/YAML+front+matter) for more info about Obsidian and frontmatter.)
+## 可用命令
 
-**This does two things:**
+| 命令 | 描述 |
+|------|------|
+| `npm run dev` | 开发模式构建 |
+| `npm run build` | 生产环境构建 |
+| `npm test` | 运行测试 |
+| `npm run lint` | 代码检查 |
+| `npm run lint-fix` | 自动修复代码问题 |
+| `npm run format` | 格式化代码 |
+| `npm run typecheck` | TypeScript 类型检查 |
 
--   The dg-home setting tells the plugin that this should be your home page or entry into your digital garden. (It only needs to be added to _one_ note, not every note you'll publish).
+## 技术栈
 
--   The dg-publish setting tells the plugin that this note should be published to your digital garden. Notes without this setting will not be published. (In other terms: Every note you publish will need this setting.)
+- **框架**: Obsidian Plugin
+- **语言**: TypeScript, Svelte
+- **构建**: esbuild
+- **测试**: Jest
+- **代码质量**: ESLint, Prettier, Husky
 
-7. Open your command palette by pressing CTRL+P on Windows/Linux (CMD+P on Mac) and find the "Digital Garden: Publish Single Note" command. Press enter.
-8. Go to your site's URL which you should find on [Vercel](https://vercel.com/dashboard). If nothing shows up yet, wait a minute and refresh. Your note should now appear.
+## 许可证
 
-Congratulations, you now have your own digital garden, hosted free of charge!
-You can now start adding links as you usually would in Obisidan, with double square brackets like this: [[Some Other Note]], to the note that you just published. You can also link to a specific header by using the syntax [[Some Other Note#A Header]]. Remember to also publish the notes your are linking to as this will not happen automatically. This is by design. You are always in control of what notes you actually want to publish. If you did not publish a linked note, the link will simply lead to a site telling the user that this note does not exist.
-
-![new-note-demo](https://raw.githubusercontent.com/oleeskild/obsidian-digital-garden/main/img/new-note-demo.gif)
-
-## Alternative: Forestry.md (No GitHub Required)
-
-If you prefer a simpler setup without managing GitHub repositories, you can use [Forestry.md](https://forestry.md) - a managed hosting service for digital gardens:
-
-1. Create an account at [forestry.md](https://forestry.md)
-2. Get your Garden Key from the Forestry.md dashboard
-3. In Obsidian, open Digital Garden settings and enter your Garden Key in the Forestry.md section
-4. Start publishing notes directly - no GitHub or Vercel setup needed
-
-This is ideal for non-technical users who want a working digital garden without dealing with GitHub tokens, repositories, or deployment pipelines.
-
-## Modifying the template/site
-
-The code for the website is available in the repo you created in step 3, and this is yours to modify however you want.
-
-### CSS Customization
-
-Any CSS/SCSS files placed under `src/site/styles/user` will automatically be linked into the head right after all other styling, meaning that the styling added here will take precedence over everything else.
-
-The template exposes many CSS variables that you can override, including:
-- Colors (background, text, links, etc.)
-- Typography (fonts, sizes, line heights)
-- Spacing and layout
-- Component-specific styling (graph, search, sidebar)
-
-### Custom Components
-
-You can add custom components to your garden by creating Nunjucks templates in `src/site/_includes/components/user/`. These can be included in your notes or layouts to add interactive elements, custom widgets, or specialized content displays.
-
-## Updating the template
-
-In the setting menu for the plugin there is, in addition to the previously mentioned settings, a setting with the name "Site Template" with a button saying "Manage site template". Clicking this should open up a popup-window with the setting "Update site to latest template" and a button saying "Create PR". Whenever digital garden template receives any updates, this button can be used to update your site. It will create a new branch in your repo with the changes and create a Pull Request to your main branch. The plugin will present you with this URL in the setting view.
-
-If you used the "Deploy to Vercel" button, a Vercel bot will build a preview version of your site which you can visit to see that the changes does not contain any breaking changes. The URL should be visible in the PR.
-When you are ready you can use the "Merge pull request" button on the pull request page to merge the changes into your main branch and make the changes go live.
-
-In the future you will be notified with a visual cue whenever there is an update ready. For now you will need to manually check. If you have the latest version, you will be told so.
-
-### Advanced changes for developers
-The project uses the [eleventy](https://www.11ty.dev) templating engine. This uses `.eleventy.js` as the main entry-point. Please read the [eleventy docs](https://www.11ty.dev/docs/config/) if you need a quick-start on how this works.
-
-If you want to do any changes that aren't overwritten when updating the template, do so in the `src/helpers/userSetup.js` file, which hooks into the elventy setup in .eleventy.js
+MIT License
 
 ---
 
-
-## Local development
-
-NOTE: this plugin contains a testing vault at `src/dg-testVault`, which is recommended for local development.
-
-1. Clone this repository
-2. (for best compatibility, use node version manager and run `nvm install && nvm use`)
-3. Install dependencies with `npm install`
-4. Run with `npm run dev`
-5. Open the vault from `src/dg-testVault` into obsidian
-
-6. (if you want to develop this plugin with another vault, move it into .obsidian/plugins of that vault)
-
-To use the test vault with github, add your test repository values to a .env file with:
-
-```
-GITHUB_REPO=
-GITHUB_TOKEN=
-GITHUB_USERNAME=
-
-# Forestry.md settings (if you're using Forestry.md)
-FORESTRY_BASE_URL=https://api.forestry.md/app
-FORESTRY_PAGE_NAME=
-FORESTRY_API_KEY=
-```
-
-Note: this repository uses prettier and eslint to enforce code formatting and style. It is recommended to install these to your IDE for automatic formatting and error highlighting.
-
-
-## Join the Community
-
-Be a part of the Digital Garden Community by joining our [Discord Server](https://discord.gg/UsPH74nEVS). 
-
-## Code Contributers
-
-Huge thanks to all the contributors who helped in making this
-
-<a href="https://github.com/oleeskild/obsidian-digital-garden/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=oleeskild/obsidian-digital-garden" />
-</a>
-
----
-
-## Support
-
-Built with coffee and stubbornness. If this plugin has been useful to you, a coffee would make my day—but it's completely free and always will be.
-
-[<img style="float:left" src="https://cdn.ko-fi.com/cdn/kofi3.png?v=3" width="200">](https://ko-fi.com/oleeskild)
-
+**注意**: 此插件为个人定制版本，基于 [Obsidian Digital Garden](https://github.com/oleeskild/obsidian-digital-garden) 修改。如需通用版本，请参考原项目。
