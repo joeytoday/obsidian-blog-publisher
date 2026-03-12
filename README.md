@@ -80,7 +80,6 @@
    - 在笔记 Frontmatter 中添加：
    ```yaml
    ---
-   dg-home: true
    dg-publish: true
    ---
    ```

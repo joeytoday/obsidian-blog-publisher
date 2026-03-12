@@ -157,9 +157,7 @@ export default class DigitalGardenSiteManager {
 
 		const frontMatter = this.metadataCache.getCache(file.path)?.frontmatter;
 
-		if (frontMatter && frontMatter["dg-home"] === true) {
-			urlPath = "/";
-		} else if (frontMatter?.permalink) {
+		if (frontMatter?.permalink) {
 			urlPath = `/${frontMatter.permalink}`;
 		} else if (frontMatter?.["dg-permalink"]) {
 			urlPath = `/${frontMatter["dg-permalink"]}`;

@@ -12,7 +12,6 @@ import { PublishFile } from "../publishFile/PublishFile";
 export type TFrontmatter = Record<string, unknown> & {
 	"dg-path"?: string;
 	"dg-permalink"?: string;
-	"dg-home"?: boolean;
 	tags?: string;
 };
 
@@ -117,10 +116,6 @@ export class FrontmatterCompiler {
 				(typeof fileFrontMatter["tags"] === "string"
 					? fileFrontMatter["tags"].split(/,\s*/)
 					: fileFrontMatter["tags"]) || [];
-
-			if (fileFrontMatter["dg-home"] && !tags.contains("gardenEntry")) {
-				tags.push("gardenEntry");
-			}
 
 			if (tags.length > 0) {
 				publishedFrontMatter["tags"] = tags;
