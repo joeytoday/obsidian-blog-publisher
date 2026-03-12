@@ -1,0 +1,30 @@
+# vscode
+.vscode 
+
+# Intellij
+*.iml
+.idea
+
+# npm
+node_modules
+
+# Don't include the compiled main.js file in the repo.
+# They should be uploaded to GitHub releases instead.
+/main.js
+
+# Exclude sourcemaps
+*.map
+
+# obsidian
+data.json
+!src/dg-testVault/.obsidian/plugins/obsidian-excalidraw-plugin/data.json
+!src/dg-testVault/.obsidian/plugins/dataview/data.json
+deploy.ps1
+deploy.sh
+
+# mac
+.DS_Store
+yarn.lock
+
+.env
+src/dg-testVault/.obsidian/workspace.json
