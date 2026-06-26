@@ -19,6 +19,7 @@ import {
 } from "../utils/utils";
 import slugify from "@sindresorhus/slugify";
 import { fixMarkdownHeaderSyntax } from "../utils/markdown";
+import { VAULT_IMAGE_PATH_PREFIX } from "../constants";
 import {
 	CODEBLOCK_REGEX,
 	CODE_FENCE_REGEX,
@@ -748,7 +749,7 @@ export class GardenPageCompiler {
 						const image = await this.vault.readBinary(linkedFile);
 						const imageBase64 = arrayBufferToBase64(image);
 
-						const cmsImgPath = `/img/user/${linkedFile.path}`;
+						const cmsImgPath = `${VAULT_IMAGE_PATH_PREFIX}${linkedFile.path}`;
 						let name = "";
 
 						if (metaData && size) {
@@ -849,7 +850,7 @@ export class GardenPageCompiler {
 						}
 						const image = await this.vault.readBinary(linkedFile);
 						const imageBase64 = arrayBufferToBase64(image);
-						const cmsImgPath = `/img/user/${linkedFile.path}`;
+						const cmsImgPath = `${VAULT_IMAGE_PATH_PREFIX}${linkedFile.path}`;
 
 						const imageMarkdown = `![${imageName}](${encodeURI(
 							cmsImgPath,
@@ -926,7 +927,7 @@ export class GardenPageCompiler {
 						continue;
 					}
 
-					const cmsImgPath = `/img/user/${linkedFile.path}`;
+					const cmsImgPath = `${VAULT_IMAGE_PATH_PREFIX}${linkedFile.path}`;
 
 					const imageMarkdown = `[${linkDisplayName}](${encodeURI(
 						cmsImgPath,
@@ -1026,7 +1027,7 @@ export class GardenPageCompiler {
 						const pdfBinary =
 							await this.vault.readBinary(linkedFile);
 						const pdfBase64 = arrayBufferToBase64(pdfBinary);
-						const cmsPdfPath = `/img/user/${linkedFile.path}`;
+						const cmsPdfPath = `${VAULT_IMAGE_PATH_PREFIX}${linkedFile.path}`;
 
 						assets.push({
 							path: cmsPdfPath,
@@ -1135,7 +1136,7 @@ export class GardenPageCompiler {
 						const pdfBinary =
 							await this.vault.readBinary(linkedFile);
 						const pdfBase64 = arrayBufferToBase64(pdfBinary);
-						const cmsPdfPath = `/img/user/${linkedFile.path}`;
+						const cmsPdfPath = `${VAULT_IMAGE_PATH_PREFIX}${linkedFile.path}`;
 
 						assets.push({
 							path: cmsPdfPath,

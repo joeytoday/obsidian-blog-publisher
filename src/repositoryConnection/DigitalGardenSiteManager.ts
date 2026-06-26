@@ -13,7 +13,11 @@ import {
 } from "./RepositoryConnection";
 import Logger from "js-logger";
 import { TemplateUpdateChecker } from "./TemplateManager";
-import { IMAGE_PATH_BASE } from "../constants";
+import {
+	IMAGE_PATH_BASE,
+	DEFAULT_NOTE_PATH_BASE,
+	GITHUB_TREE_TYPE_BLOB,
+} from "../constants";
 import PublishPlatformConnectionFactory from "./PublishPlatformConnectionFactory";
 
 const logger = Logger.get("digital-garden-site-manager");
@@ -23,7 +27,7 @@ const logger = Logger.get("digital-garden-site-manager");
  * Falls back to "src/content/" if not set.
  */
 export function getNotePathBase(settings: DigitalGardenSettings): string {
-	return settings.contentBasePath || "src/content/";
+	return settings.contentBasePath || DEFAULT_NOTE_PATH_BASE;
 }
 
 export interface PathRewriteRule {
@@ -197,7 +201,7 @@ export default class DigitalGardenSiteManager {
 			(x): x is ContentTreeItem =>
 				typeof x.path === "string" &&
 				x.path.startsWith(basePath) &&
-				x.type === "blob" &&
+				x.type === GITHUB_TREE_TYPE_BLOB &&
 				x.path !== `${basePath}notes.json`,
 		);
 		const hashes: Record<string, string> = {};
@@ -215,18 +219,16 @@ export default class DigitalGardenSiteManager {
 	): Promise<Record<string, string>> {
 		const files = contentTree.tree ?? [];
 
-		const imageBasePath = IMAGE_PATH_BASE;
-
 		const images = files.filter(
 			(x): x is ContentTreeItem =>
 				typeof x.path === "string" &&
-				x.path.startsWith(imageBasePath) &&
-				x.type === "blob",
+				x.path.startsWith(IMAGE_PATH_BASE) &&
+				x.type === GITHUB_TREE_TYPE_BLOB,
 		);
 		const hashes: Record<string, string> = {};
 
 		for (const img of images) {
-			const vaultPath = img.path.replace(imageBasePath, "");
+			const vaultPath = img.path.replace(IMAGE_PATH_BASE, "");
 			hashes[vaultPath] = img.sha;
 		}
 

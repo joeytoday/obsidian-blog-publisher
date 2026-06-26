@@ -10,6 +10,7 @@
 	import Publisher from "src/publisher/Publisher";
 	import Icon from "../../ui/Icon.svelte";
 	import { CompiledPublishFile } from "src/publishFile/PublishFile";
+	import { getErrorMessage } from "../../utils/utils";
 	export let publishStatusManager: IPublishStatusManager;
 	export let publisher: Publisher;
 	export let showDiff: (path: string) => void;
@@ -222,7 +223,7 @@
 			publishedPaths = [...publishedPaths, ...processingPaths];
 			processingPaths = [];
 		} catch (e) {
-			const msg = e instanceof Error ? e.message : String(e);
+			const msg = getErrorMessage(e);
 			new Notice(`发布失败：${msg}`);
 			processingPaths = [];
 			showPublishingView = false;

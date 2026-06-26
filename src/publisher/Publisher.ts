@@ -1,6 +1,11 @@
 import { MetadataCache, Notice, TFile, Vault } from "obsidian";
 import { Base64 } from "js-base64";
-import { getRewriteRules, getGardenPathForNote } from "../utils/utils";
+import {
+	getRewriteRules,
+	getGardenPathForNote,
+	stripVaultImagePrefix,
+	shouldSkipUnchangedImage,
+} from "../utils/utils";
 import {
 	hasPublishFlag,
 	isPublishFrontmatterValid,
@@ -15,7 +20,7 @@ import { Assets, GardenPageCompiler } from "../compiler/GardenPageCompiler";
 import Logger from "js-logger";
 import { RepositoryConnection } from "../repositoryConnection/RepositoryConnection";
 import PublishPlatformConnectionFactory from "src/repositoryConnection/PublishPlatformConnectionFactory";
-import { IMAGE_PATH_BASE, VAULT_IMAGE_PATH_PREFIX } from "../constants";
+import { IMAGE_PATH_BASE } from "../constants";
 
 export interface MarkedForPublishing {
 	notes: PublishFile[];
@@ -106,11 +111,7 @@ export default class Publisher {
 	public async delete(path: string, sha?: string): Promise<boolean> {
 		this.validateSettings();
 
-		const userGardenConnection = new RepositoryConnection(
-			await PublishPlatformConnectionFactory.createPublishPlatformConnection(
-				this.settings,
-			),
-		);
+		const userGardenConnection = await this.getConnection();
 
 		const deleted = await userGardenConnection.deleteFile(path, {
 			sha,
@@ -124,19 +125,13 @@ export default class Publisher {
 			return false;
 		}
 
-		try {
-			const [text, assets] = file.compiledFile;
-			const _remoteImageHashes = await this.getRemoteImageHashes();
+		const [text, assets] = file.compiledFile;
+		const remoteImageHashes = await this.getRemoteImageHashes();
 
-			await this.uploadText(file.getPath(), text, file?.remoteHash);
-			await this.uploadAssets(assets, _remoteImageHashes);
+		await this.uploadText(file.getPath(), text, file?.remoteHash);
+		await this.uploadAssets(assets, remoteImageHashes);
 
-			return true;
-		} catch (error) {
-			console.error(error);
-
-			return false;
-		}
+		return true;
 	}
 
 	public async deleteBatch(filePaths: string[]): Promise<boolean> {
@@ -144,11 +139,7 @@ export default class Publisher {
 			return true;
 		}
 
-		const userGardenConnection = new RepositoryConnection(
-			await PublishPlatformConnectionFactory.createPublishPlatformConnection(
-				this.settings,
-			),
-		);
+		const userGardenConnection = await this.getConnection();
 
 		const notePathBase = getNotePathBase(this.settings);
 		await userGardenConnection.deleteFiles(filePaths, notePathBase);
@@ -165,11 +156,7 @@ export default class Publisher {
 			return true;
 		}
 
-		const userGardenConnection = new RepositoryConnection(
-			await PublishPlatformConnectionFactory.createPublishPlatformConnection(
-				this.settings,
-			),
-		);
+		const userGardenConnection = await this.getConnection();
 
 		const remoteImageHashes = await this.getRemoteImageHashes();
 		const notePathBase = getNotePathBase(this.settings);
@@ -185,11 +172,7 @@ export default class Publisher {
 	}
 
 	private async getRemoteImageHashes(): Promise<Record<string, string>> {
-		const userGardenConnection = new RepositoryConnection(
-			await PublishPlatformConnectionFactory.createPublishPlatformConnection(
-				this.settings,
-			),
-		);
+		const userGardenConnection = await this.getConnection();
 
 		const contentTree = await userGardenConnection
 			.getContent("HEAD")
@@ -207,6 +190,14 @@ export default class Publisher {
 		return siteManager.getImageHashes(contentTree);
 	}
 
+	private async getConnection(): Promise<RepositoryConnection> {
+		return new RepositoryConnection(
+			await PublishPlatformConnectionFactory.createPublishPlatformConnection(
+				this.settings,
+			),
+		);
+	}
+
 	private async uploadToGithub(
 		path: string,
 		content: string,
@@ -215,11 +206,7 @@ export default class Publisher {
 		this.validateSettings();
 		let message = `Update content ${path}`;
 
-		const userGardenConnection = new RepositoryConnection(
-			await PublishPlatformConnectionFactory.createPublishPlatformConnection(
-				this.settings,
-			),
-		);
+		const userGardenConnection = await this.getConnection();
 
 		if (!remoteFileHash) {
 			const file = await userGardenConnection.getFile(path).catch(() => {
@@ -251,7 +238,7 @@ export default class Publisher {
 	}
 
 	private async uploadImage(filePath: string, content: string, sha?: string) {
-		const relativePath = filePath.replace(VAULT_IMAGE_PATH_PREFIX, "");
+		const relativePath = stripVaultImagePrefix(filePath);
 		const path = `${IMAGE_PATH_BASE}${relativePath}`;
 		await this.uploadToGithub(path, content, sha);
 	}
@@ -261,19 +248,22 @@ export default class Publisher {
 		remoteImageHashes: Record<string, string> = {},
 	) {
 		for (const image of assets.images) {
-			const hashKey = image.path.replace(VAULT_IMAGE_PATH_PREFIX, "");
-			const remoteHash = remoteImageHashes[hashKey];
-
 			if (
-				remoteHash &&
-				image.localHash &&
-				remoteHash === image.localHash
+				shouldSkipUnchangedImage(
+					image.path,
+					image.localHash,
+					remoteImageHashes,
+				)
 			) {
 				Logger.debug(`Skipping unchanged image: ${image.path}`);
 				continue;
 			}
 
-			await this.uploadImage(image.path, image.content, remoteHash);
+			await this.uploadImage(
+				image.path,
+				image.content,
+				remoteImageHashes[stripVaultImagePrefix(image.path)],
+			);
 		}
 	}
 

@@ -2,10 +2,19 @@ import { Octokit } from "@octokit/core";
 import Logger from "js-logger";
 import { CompiledPublishFile } from "src/publishFile/PublishFile";
 import { IPublishPlatformConnection } from "src/models/IPublishPlatformConnection";
-import { getGardenPathForNote } from "../utils/utils";
+import {
+	getGardenPathForNote,
+	normalizeGitPath,
+	stripVaultImagePrefix,
+	shouldSkipUnchangedImage,
+} from "../utils/utils";
 import { PathRewriteRules } from "./DigitalGardenSiteManager";
 
-import { IMAGE_PATH_BASE, VAULT_IMAGE_PATH_PREFIX } from "../constants";
+import {
+	GITHUB_FILE_MODE,
+	GITHUB_TREE_TYPE_BLOB,
+	IMAGE_PATH_BASE,
+} from "../constants";
 
 const logger = Logger.get("repository-connection");
 
@@ -110,7 +119,7 @@ export class RepositoryConnection {
 			sha ??= await this.getFile(path, branch).then((file) => file?.sha);
 
 			if (!sha) {
-				console.error(
+				logger.error(
 					`cannot find file ${path} on github, not removing`,
 				);
 
@@ -211,67 +220,29 @@ export class RepositoryConnection {
 			throw new Error("Could not get latest commit for batch delete");
 		}
 
-		const normalizePath = (path: string) =>
-			path.startsWith("/") ? path.slice(1) : path;
-
 		const filesToDelete = filePaths.map((path) => {
 			if (path.endsWith(".md")) {
-				return `${notePathBase}${normalizePath(path)}`;
+				return `${notePathBase}${normalizeGitPath(path)}`;
 			}
 
-			return `${IMAGE_PATH_BASE}${normalizePath(path)}`;
+			return `${IMAGE_PATH_BASE}${normalizeGitPath(path)}`;
 		});
-
-		const repoDataPromise = this.octokit.request(
-			"GET /repos/{owner}/{repo}",
-			{
-				...this.getBasePayload(),
-			},
-		);
-
-		const latestCommitSha = latestCommit.sha;
-		const baseTreeSha = latestCommit.commit.tree.sha;
 
 		// Use base_tree + sha: null to mark files for deletion.
 		// This only touches the specified files, avoiding data loss
 		// from truncated tree responses on large repos.
 		const treeEntries = filesToDelete.map((path) => ({
 			path,
-			mode: "100644" as const,
-			type: "blob" as const,
+			mode: GITHUB_FILE_MODE,
+			type: GITHUB_TREE_TYPE_BLOB,
 			sha: null,
 		}));
 
-		const newTree = await this.octokit.request(
-			"POST /repos/{owner}/{repo}/git/trees",
-			{
-				...this.getBasePayload(),
-				base_tree: baseTreeSha,
-				tree: treeEntries,
-			},
-		);
-
-		const commitMessage = "Deleted multiple files";
-
-		const newCommit = await this.octokit.request(
-			"POST /repos/{owner}/{repo}/git/commits",
-			{
-				...this.getBasePayload(),
-				message: commitMessage,
-				tree: newTree.data.sha,
-				parents: [latestCommitSha],
-			},
-		);
-
-		const defaultBranch = (await repoDataPromise).data.default_branch;
-
-		await this.octokit.request(
-			"PATCH /repos/{owner}/{repo}/git/refs/heads/{branch}",
-			{
-				...this.getBasePayload(),
-				branch: defaultBranch,
-				sha: newCommit.data.sha,
-			},
+		await this.commitTreeToDefaultBranch(
+			latestCommit.commit.tree.sha,
+			treeEntries,
+			"Deleted multiple files",
+			latestCommit.sha,
 		);
 	}
 
@@ -294,30 +265,9 @@ export class RepositoryConnection {
 			throw new Error("Could not get latest commit for batch update");
 		}
 
-		const repoDataPromise = this.octokit.request(
-			"GET /repos/{owner}/{repo}",
-			{
-				...this.getBasePayload(),
-			},
-		);
-
-		const latestCommitSha = latestCommit.sha;
-		const baseTreeSha = latestCommit.commit.tree.sha;
-
-		const normalizePath = (path: string) =>
-			path.startsWith("/") ? path.slice(1) : path;
-
 		const treePromises = files.map(async (file) => {
 			const [text, _] = file.compiledFile;
-
-			const blob = await this.octokit.request(
-				"POST /repos/{owner}/{repo}/git/blobs",
-				{
-					...this.getBasePayload(),
-					content: text,
-					encoding: "utf-8",
-				},
-			);
+			const sha = await this.createBlob(text, "utf-8");
 
 			const filePath = file.getPath();
 
@@ -326,10 +276,10 @@ export class RepositoryConnection {
 				: filePath;
 
 			return {
-				path: `${notePathBase}${normalizePath(rewrittenPath)}`,
-				mode: "100644" as const,
-				type: "blob" as const,
-				sha: blob.data.sha,
+				path: `${notePathBase}${normalizeGitPath(rewrittenPath)}`,
+				mode: GITHUB_FILE_MODE,
+				type: GITHUB_TREE_TYPE_BLOB,
+				sha,
 			};
 		});
 
@@ -347,13 +297,12 @@ export class RepositoryConnection {
 
 		const imagesToUpload = Array.from(uniqueImages.values()).filter(
 			(asset) => {
-				const hashKey = asset.path.replace(VAULT_IMAGE_PATH_PREFIX, "");
-				const remoteHash = remoteImageHashes[hashKey];
-
 				if (
-					remoteHash &&
-					asset.localHash &&
-					remoteHash === asset.localHash
+					shouldSkipUnchangedImage(
+						asset.path,
+						asset.localHash,
+						remoteImageHashes,
+					)
 				) {
 					logger.debug(`Skipping unchanged image: ${asset.path}`);
 
@@ -365,22 +314,15 @@ export class RepositoryConnection {
 		);
 
 		const treeAssetPromises = imagesToUpload.map(async (asset) => {
-			const blob = await this.octokit.request(
-				"POST /repos/{owner}/{repo}/git/blobs",
-				{
-					...this.getBasePayload(),
-					content: asset.content,
-					encoding: "base64",
-				},
-			);
+			const sha = await this.createBlob(asset.content, "base64");
 
 			return {
-				path: `${IMAGE_PATH_BASE}${normalizePath(
-					asset.path.replace(VAULT_IMAGE_PATH_PREFIX, ""),
+				path: `${IMAGE_PATH_BASE}${normalizeGitPath(
+					stripVaultImagePrefix(asset.path),
 				)}`,
-				mode: "100644" as const,
-				type: "blob" as const,
-				sha: blob.data.sha,
+				mode: GITHUB_FILE_MODE,
+				type: GITHUB_TREE_TYPE_BLOB,
+				sha,
 			};
 		});
 		treePromises.push(...treeAssetPromises);
@@ -390,8 +332,8 @@ export class RepositoryConnection {
 
 		const tree: Array<{
 			path: string;
-			mode: "100644";
-			type: "blob";
+			mode: typeof GITHUB_FILE_MODE;
+			type: typeof GITHUB_TREE_TYPE_BLOB;
 			sha: string;
 		}> = [];
 
@@ -399,6 +341,46 @@ export class RepositoryConnection {
 			const batch = treePromises.slice(i, i + CONCURRENCY_LIMIT);
 			tree.push(...(await Promise.all(batch)));
 		}
+
+		await this.commitTreeToDefaultBranch(
+			latestCommit.commit.tree.sha,
+			tree,
+			"Published multiple files",
+			latestCommit.sha,
+		);
+	}
+
+	private async createBlob(
+		content: string,
+		encoding: "utf-8" | "base64",
+	): Promise<string> {
+		const blob = await this.octokit.request(
+			"POST /repos/{owner}/{repo}/git/blobs",
+			{
+				...this.getBasePayload(),
+				content,
+				encoding,
+			},
+		);
+
+		return blob.data.sha;
+	}
+
+	private async commitTreeToDefaultBranch(
+		baseTreeSha: string,
+		tree: Array<{
+			path: string;
+			mode: typeof GITHUB_FILE_MODE;
+			type: typeof GITHUB_TREE_TYPE_BLOB;
+			sha: string | null;
+		}>,
+		commitMessage: string,
+		latestCommitSha: string,
+	): Promise<void> {
+		const repoDataPromise = this.octokit.request(
+			"GET /repos/{owner}/{repo}",
+			{ ...this.getBasePayload() },
+		);
 
 		const newTree = await this.octokit.request(
 			"POST /repos/{owner}/{repo}/git/trees",
@@ -408,8 +390,6 @@ export class RepositoryConnection {
 				tree,
 			},
 		);
-
-		const commitMessage = "Published multiple files";
 
 		const newCommit = await this.octokit.request(
 			"POST /repos/{owner}/{repo}/git/commits",

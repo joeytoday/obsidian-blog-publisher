@@ -10,12 +10,14 @@ import { DigitalGardenSettingTab } from "./src/views/DigitalGardenSettingTab";
 import Logger from "js-logger";
 import { PublishFile } from "./src/publishFile/PublishFile";
 import { ObsidianFrontMatterEngine } from "./src/publishFile/ObsidianFrontMatterEngine";
+import { DEFAULT_NOTE_PATH_BASE } from "./src/constants";
+import { getErrorMessage } from "./src/utils/utils";
 
 const DEFAULT_SETTINGS: DigitalGardenSettings = {
 	githubRepo: "",
 	githubToken: "",
 	githubUserName: "",
-	contentBasePath: "src/content/",
+	contentBasePath: DEFAULT_NOTE_PATH_BASE,
 	gardenBaseUrl: "",
 	prHistory: [],
 	siteName: "Digital Garden",
@@ -283,7 +285,7 @@ export default class DigitalGarden extends Plugin {
 
 			return publishSuccessful;
 		} catch (e) {
-			console.error(e instanceof Error ? e.message : String(e));
+			console.error(getErrorMessage(e));
 			new Notice("发布失败，出现错误。");
 
 			return false;
@@ -389,8 +391,8 @@ export default class DigitalGarden extends Plugin {
 				new Notice(`成功删除 ${imagesToDelete.length} 张图片！`);
 			}
 		} catch (e) {
-			console.error(e instanceof Error ? e.message : String(e));
-			const msg = e instanceof Error ? e.message : String(e);
+			const msg = getErrorMessage(e);
+			console.error(msg);
 			new Notice(`发布失败：${msg}`);
 		} finally {
 			statusBarItem.remove();

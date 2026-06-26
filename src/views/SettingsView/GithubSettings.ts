@@ -1,6 +1,7 @@
 import { Setting, debounce, getIcon } from "obsidian";
 import SettingView from "./SettingView";
 import { Octokit } from "@octokit/core";
+import { DEFAULT_NOTE_PATH_BASE } from "../../constants";
 
 export class GithubSettings {
 	settings: SettingView;
@@ -250,10 +251,12 @@ export class GithubSettings {
 	private initializeContentBasePathSetting() {
 		new Setting(this.settingsRootElement)
 			.setName("内容发布路径")
-			.setDesc("笔记在仓库中的发布路径，默认为：src/content/")
+			.setDesc(
+				`笔记在仓库中的发布路径，默认为：${DEFAULT_NOTE_PATH_BASE}`,
+			)
 			.addText((text) =>
 				text
-					.setPlaceholder("src/content/")
+					.setPlaceholder(DEFAULT_NOTE_PATH_BASE)
 					.setValue(this.settings.settings.contentBasePath)
 					.onChange(async (value) => {
 						const normalizedPath = value.endsWith("/")
