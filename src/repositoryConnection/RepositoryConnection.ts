@@ -5,11 +5,9 @@ import { IPublishPlatformConnection } from "src/models/IPublishPlatformConnectio
 import { getGardenPathForNote } from "../utils/utils";
 import { PathRewriteRules } from "./DigitalGardenSiteManager";
 
-const logger = Logger.get("repository-connection");
+import { IMAGE_PATH_BASE, VAULT_IMAGE_PATH_PREFIX } from "../constants";
 
-// Path constants - these are used as fallbacks
-const IMAGE_PATH_BASE = "src/site/";
-const DEFAULT_NOTE_PATH_BASE = "src/site/notes/";
+const logger = Logger.get("repository-connection");
 
 interface IPutPayload {
 	path: string;
@@ -58,11 +56,19 @@ export class RepositoryConnection {
 			);
 
 			if (response.status === 200) {
+				if (response.data.truncated) {
+					logger.warn(
+						"Git tree response is truncated — some files may be missed",
+					);
+				}
+
 				return response.data;
 			}
 		} catch (error) {
 			throw new Error(
-				`Could not get file ${""} from repository ${this.getRepositoryName()}`,
+				`Could not get content tree from repository ${this.getRepositoryName()}: ${
+					error instanceof Error ? error.message : String(error)
+				}`,
 			);
 		}
 	}
@@ -189,31 +195,28 @@ export class RepositoryConnection {
 			);
 		} catch (error) {
 			logger.error(error);
+			throw error;
 		}
 	}
 
 	/**
-	 * Delete multiple files in a single commit
+	 * Delete multiple files in a single commit using base_tree + sha=null.
 	 * @param filePaths - Array of file paths to delete
 	 * @param notePathBase - The base path for notes (e.g., "src/content/")
 	 */
-	async deleteFiles(filePaths: string[], notePathBase?: string) {
+	async deleteFiles(filePaths: string[], notePathBase: string) {
 		const latestCommit = await this.getLatestCommit();
 
 		if (!latestCommit) {
-			logger.error("Could not get latest commit");
-
-			return;
+			throw new Error("Could not get latest commit for batch delete");
 		}
 
 		const normalizePath = (path: string) =>
 			path.startsWith("/") ? path.slice(1) : path;
 
-		const noteBase = notePathBase || DEFAULT_NOTE_PATH_BASE;
-
 		const filesToDelete = filePaths.map((path) => {
 			if (path.endsWith(".md")) {
-				return `${noteBase}${normalizePath(path)}`;
+				return `${notePathBase}${normalizePath(path)}`;
 			}
 
 			return `${IMAGE_PATH_BASE}${normalizePath(path)}`;
@@ -229,37 +232,22 @@ export class RepositoryConnection {
 		const latestCommitSha = latestCommit.sha;
 		const baseTreeSha = latestCommit.commit.tree.sha;
 
-		const baseTree = await this.octokit.request(
-			"GET /repos/{owner}/{repo}/git/trees/{tree_sha}?recursive=1",
-			{
-				...this.getBasePayload(),
-				tree_sha: baseTreeSha,
-			},
-		);
-
-		const newTreeEntries = baseTree.data.tree
-			.filter(
-				(item: { path: string }) => !filesToDelete.includes(item.path),
-			) // Exclude files to delete
-			.map(
-				(item: {
-					path: string;
-					mode: string;
-					type: string;
-					sha: string;
-				}) => ({
-					path: item.path,
-					mode: item.mode,
-					type: item.type,
-					sha: item.sha,
-				}),
-			);
+		// Use base_tree + sha: null to mark files for deletion.
+		// This only touches the specified files, avoiding data loss
+		// from truncated tree responses on large repos.
+		const treeEntries = filesToDelete.map((path) => ({
+			path,
+			mode: "100644" as const,
+			type: "blob" as const,
+			sha: null,
+		}));
 
 		const newTree = await this.octokit.request(
 			"POST /repos/{owner}/{repo}/git/trees",
 			{
 				...this.getBasePayload(),
-				tree: newTreeEntries,
+				base_tree: baseTreeSha,
+				tree: treeEntries,
 			},
 		);
 
@@ -278,10 +266,10 @@ export class RepositoryConnection {
 		const defaultBranch = (await repoDataPromise).data.default_branch;
 
 		await this.octokit.request(
-			"PATCH /repos/{owner}/{repo}/git/refs/{ref}",
+			"PATCH /repos/{owner}/{repo}/git/refs/heads/{branch}",
 			{
 				...this.getBasePayload(),
-				ref: `heads/${defaultBranch}`,
+				branch: defaultBranch,
 				sha: newCommit.data.sha,
 			},
 		);
@@ -297,15 +285,13 @@ export class RepositoryConnection {
 	async updateFiles(
 		files: CompiledPublishFile[],
 		remoteImageHashes: Record<string, string> = {},
-		notePathBase?: string,
+		notePathBase: string,
 		rewriteRules?: PathRewriteRules,
 	) {
 		const latestCommit = await this.getLatestCommit();
 
 		if (!latestCommit) {
-			logger.error("Could not get latest commit");
-
-			return;
+			throw new Error("Could not get latest commit for batch update");
 		}
 
 		const repoDataPromise = this.octokit.request(
@@ -321,101 +307,98 @@ export class RepositoryConnection {
 		const normalizePath = (path: string) =>
 			path.startsWith("/") ? path.slice(1) : path;
 
-		const noteBase = notePathBase || DEFAULT_NOTE_PATH_BASE;
-
 		const treePromises = files.map(async (file) => {
 			const [text, _] = file.compiledFile;
 
-			try {
-				const blob = await this.octokit.request(
-					"POST /repos/{owner}/{repo}/git/blobs",
-					{
-						...this.getBasePayload(),
-						content: text,
-						encoding: "utf-8",
-					},
-				);
+			const blob = await this.octokit.request(
+				"POST /repos/{owner}/{repo}/git/blobs",
+				{
+					...this.getBasePayload(),
+					content: text,
+					encoding: "utf-8",
+				},
+			);
 
-				// 应用路径重写规则
+			const filePath = file.getPath();
 
-				const filePath = file.getPath();
+			const rewrittenPath = rewriteRules
+				? getGardenPathForNote(filePath, rewriteRules)
+				: filePath;
 
-				const rewrittenPath = rewriteRules
-					? getGardenPathForNote(filePath, rewriteRules)
-					: filePath;
-
-				return {
-					path: `${noteBase}${normalizePath(rewrittenPath)}`,
-					mode: "100644",
-					type: "blob",
-					sha: blob.data.sha,
-				};
-			} catch (error) {
-				logger.error(error);
-			}
+			return {
+				path: `${notePathBase}${normalizePath(rewrittenPath)}`,
+				mode: "100644" as const,
+				type: "blob" as const,
+				sha: blob.data.sha,
+			};
 		});
 
 		// Filter out unchanged images before creating blobs
 		const allImages = files.flatMap((x) => x.compiledFile[1].images);
 
-		const imagesToUpload = allImages.filter((asset) => {
-			// Convert asset path to hash key: /img/user/attachments/image.png -> attachments/image.png
-			const hashKey = asset.path.replace("/img/user/", "");
-			const remoteHash = remoteImageHashes[hashKey];
+		// Deduplicate images by path within the batch
+		const uniqueImages = new Map<string, (typeof allImages)[number]>();
 
-			// Skip if unchanged (local hash matches remote hash)
-			if (
-				remoteHash &&
-				asset.localHash &&
-				remoteHash === asset.localHash
-			) {
-				logger.debug(`Skipping unchanged image: ${asset.path}`);
-
-				return false;
+		for (const asset of allImages) {
+			if (!uniqueImages.has(asset.path)) {
+				uniqueImages.set(asset.path, asset);
 			}
+		}
 
-			return true;
-		});
+		const imagesToUpload = Array.from(uniqueImages.values()).filter(
+			(asset) => {
+				const hashKey = asset.path.replace(VAULT_IMAGE_PATH_PREFIX, "");
+				const remoteHash = remoteImageHashes[hashKey];
+
+				if (
+					remoteHash &&
+					asset.localHash &&
+					remoteHash === asset.localHash
+				) {
+					logger.debug(`Skipping unchanged image: ${asset.path}`);
+
+					return false;
+				}
+
+				return true;
+			},
+		);
 
 		const treeAssetPromises = imagesToUpload.map(async (asset) => {
-			try {
-				const blob = await this.octokit.request(
-					"POST /repos/{owner}/{repo}/git/blobs",
-					{
-						...this.getBasePayload(),
-						content: asset.content,
-						encoding: "base64",
-					},
-				);
+			const blob = await this.octokit.request(
+				"POST /repos/{owner}/{repo}/git/blobs",
+				{
+					...this.getBasePayload(),
+					content: asset.content,
+					encoding: "base64",
+				},
+			);
 
-				return {
-					path: `${IMAGE_PATH_BASE}${normalizePath(asset.path)}`,
-					mode: "100644",
-					type: "blob",
-					sha: blob.data.sha,
-				};
-			} catch (error) {
-				logger.error(error);
-			}
+			return {
+				path: `${IMAGE_PATH_BASE}${normalizePath(
+					asset.path.replace(VAULT_IMAGE_PATH_PREFIX, ""),
+				)}`,
+				mode: "100644" as const,
+				type: "blob" as const,
+				sha: blob.data.sha,
+			};
 		});
 		treePromises.push(...treeAssetPromises);
 
-		const treeList = await Promise.all(treePromises);
+		// Limit concurrency to avoid triggering GitHub secondary rate limits
+		const CONCURRENCY_LIMIT = 10;
 
-		//Filter away undefined values
-		const tree = treeList.filter((x) => x !== undefined) as {
-			path?: string | undefined;
-			mode?:
-				| "100644"
-				| "100755"
-				| "040000"
-				| "160000"
-				| "120000"
-				| undefined;
-			type?: "tree" | "blob" | "commit" | undefined;
-			sha?: string | null | undefined;
-			content?: string | undefined;
-		}[];
+		const tree: Array<{
+			path: string;
+			mode: "100644";
+			type: "blob";
+			sha: string;
+		}> = [];
+
+		for (let i = 0; i < treePromises.length; i += CONCURRENCY_LIMIT) {
+			const batch = treePromises.slice(i, i + CONCURRENCY_LIMIT);
+			tree.push(...(await Promise.all(batch)));
+		}
 
 		const newTree = await this.octokit.request(
 			"POST /repos/{owner}/{repo}/git/trees",

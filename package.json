@@ -1,5 +1,5 @@
 {
-	"name": "obsidian-garden",
+	"name": "obsidian-blog-publisher",
 	"version": "1.0.0",
 	"description": "A plugin used for publishing notes to a digital garden",
 	"main": "main.js",

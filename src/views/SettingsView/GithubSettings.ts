@@ -235,15 +235,16 @@ export class GithubSettings {
 		new Setting(this.settingsRootElement)
 			.setName("GitHub Token")
 			.setDesc(desc)
-			.addText((text) =>
-				text
-					.setPlaceholder("ghp_xxxxxxxxxxxx")
+			.addText((text) => {
+				text.inputEl.setAttribute("type", "password");
+
+				text.setPlaceholder("ghp_xxxxxxxxxxxx")
 					.setValue(this.settings.settings.githubToken)
 					.onChange(async (value) => {
 						this.settings.settings.githubToken = value;
 						await this.checkConnectionAndSaveSettings();
-					}),
-			);
+					});
+			});
 	}
 
 	private initializeContentBasePathSetting() {

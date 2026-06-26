@@ -116,7 +116,7 @@ export class TemplateUpdateChecker {
 
 		if (!latestRelease) {
 			throw new Error(
-				"Unable to get latest release from oleeskid repository",
+				"Unable to get latest release from oleeskild repository",
 			);
 		}
 

@@ -13,17 +13,17 @@ import {
 } from "./RepositoryConnection";
 import Logger from "js-logger";
 import { TemplateUpdateChecker } from "./TemplateManager";
-import { IMAGE_PATH_BASE } from "../publisher/Publisher";
+import { IMAGE_PATH_BASE } from "../constants";
 import PublishPlatformConnectionFactory from "./PublishPlatformConnectionFactory";
 
 const logger = Logger.get("digital-garden-site-manager");
 
 /**
  * Get the base path for notes based on settings.
- * Falls back to "src/site/notes/" for backward compatibility if not set.
+ * Falls back to "src/content/" if not set.
  */
 export function getNotePathBase(settings: DigitalGardenSettings): string {
-	return settings.contentBasePath || "src/site/notes/";
+	return settings.contentBasePath || "src/content/";
 }
 
 export interface PathRewriteRule {
@@ -189,11 +189,9 @@ export default class DigitalGardenSiteManager {
 	async getNoteHashes(
 		contentTree: NonNullable<TRepositoryContent>,
 	): Promise<Record<string, string>> {
-		const files = contentTree.tree;
+		const files = contentTree.tree ?? [];
 
-		// Use the configured publishBasePath instead of hardcoded DEFAULT_NOTE_PATH_BASE
-		const basePath =
-			this.settings.publishBasePath || getNotePathBase(this.settings);
+		const basePath = getNotePathBase(this.settings);
 
 		const notes = files.filter(
 			(x): x is ContentTreeItem =>
@@ -217,8 +215,7 @@ export default class DigitalGardenSiteManager {
 	): Promise<Record<string, string>> {
 		const files = contentTree.tree ?? [];
 
-		// Use the configured image path instead of hardcoded IMAGE_PATH_BASE
-		const imageBasePath = this.settings.imagePublishPath || IMAGE_PATH_BASE;
+		const imageBasePath = IMAGE_PATH_BASE;
 
 		const images = files.filter(
 			(x): x is ContentTreeItem =>

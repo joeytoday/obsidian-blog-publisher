@@ -15,14 +15,12 @@ import { Assets, GardenPageCompiler } from "../compiler/GardenPageCompiler";
 import Logger from "js-logger";
 import { RepositoryConnection } from "../repositoryConnection/RepositoryConnection";
 import PublishPlatformConnectionFactory from "src/repositoryConnection/PublishPlatformConnectionFactory";
+import { IMAGE_PATH_BASE, VAULT_IMAGE_PATH_PREFIX } from "../constants";
 
 export interface MarkedForPublishing {
 	notes: PublishFile[];
 	images: string[];
 }
-
-export const IMAGE_PATH_BASE = "src/site/img/user/";
-const DEFAULT_NOTE_PATH_BASE = "src/site/notes/";
 
 /**
  * Prepares files to be published and publishes them to Github
@@ -146,46 +144,16 @@ export default class Publisher {
 			return true;
 		}
 
-		try {
-			const userGardenConnection = new RepositoryConnection(
-				await PublishPlatformConnectionFactory.createPublishPlatformConnection(
-					this.settings,
-				),
-			);
+		const userGardenConnection = new RepositoryConnection(
+			await PublishPlatformConnectionFactory.createPublishPlatformConnection(
+				this.settings,
+			),
+		);
 
-			await userGardenConnection.deleteFiles(filePaths);
+		const notePathBase = getNotePathBase(this.settings);
+		await userGardenConnection.deleteFiles(filePaths, notePathBase);
 
-			return true;
-		} catch (error) {
-			console.error(error);
-
-			return false;
-		}
-	}
-
-	public async deleteImageBatch(filePaths: string[]): Promise<boolean> {
-		if (filePaths.length === 0) {
-			return true;
-		}
-
-		try {
-			const userGardenConnection = new RepositoryConnection(
-				await PublishPlatformConnectionFactory.createPublishPlatformConnection(
-					this.settings,
-				),
-			);
-
-			const fullPaths = filePaths.map(
-				(path) => `${IMAGE_PATH_BASE}${path}`,
-			);
-			await userGardenConnection.deleteFiles(fullPaths);
-
-			return true;
-		} catch (error) {
-			console.error(error);
-
-			return false;
-		}
+		return true;
 	}
 
 	public async publishBatch(files: CompiledPublishFile[]): Promise<boolean> {
@@ -197,29 +165,23 @@ export default class Publisher {
 			return true;
 		}
 
-		try {
-			const userGardenConnection = new RepositoryConnection(
-				await PublishPlatformConnectionFactory.createPublishPlatformConnection(
-					this.settings,
-				),
-			);
+		const userGardenConnection = new RepositoryConnection(
+			await PublishPlatformConnectionFactory.createPublishPlatformConnection(
+				this.settings,
+			),
+		);
 
-			const remoteImageHashes = await this.getRemoteImageHashes();
-			const notePathBase = getNotePathBase(this.settings);
+		const remoteImageHashes = await this.getRemoteImageHashes();
+		const notePathBase = getNotePathBase(this.settings);
 
-			await userGardenConnection.updateFiles(
-				filesToPublish,
-				remoteImageHashes,
-				notePathBase,
-				this.rewriteRules,
-			);
+		await userGardenConnection.updateFiles(
+			filesToPublish,
+			remoteImageHashes,
+			notePathBase,
+			this.rewriteRules,
+		);
 
-			return true;
-		} catch (error) {
-			console.error(error);
-
-			return false;
-		}
+		return true;
 	}
 
 	private async getRemoteImageHashes(): Promise<Record<string, string>> {
@@ -281,33 +243,16 @@ export default class Publisher {
 	private async uploadText(filePath: string, content: string, sha?: string) {
 		content = Base64.encode(content);
 
-		const cache = this.metadataCache.getCache(filePath);
-		const frontmatter = cache ? cache.frontmatter : {};
-
-		const basePath =
-			this.settings.publishBasePath || DEFAULT_NOTE_PATH_BASE;
-		const typeKey = this.settings.typeDirectoryKey || "type";
-		const subDirKey = this.settings.subDirectoryKey || "year";
-
-		let publishPath = basePath;
-
-		if (frontmatter && frontmatter[typeKey]) {
-			publishPath = `${publishPath}/${frontmatter[typeKey]}`;
-		}
-
-		if (frontmatter && frontmatter[subDirKey]) {
-			const yearValue = String(frontmatter[subDirKey]).split("/")[0];
-			publishPath = `${publishPath}/${yearValue}`;
-		}
-
+		const basePath = getNotePathBase(this.settings);
 		const gardenPath = getGardenPathForNote(filePath, this.rewriteRules);
-		publishPath = `${publishPath}/${gardenPath}`;
+		const publishPath = `${basePath}${gardenPath}`;
 
 		await this.uploadToGithub(publishPath, content, sha);
 	}
 
 	private async uploadImage(filePath: string, content: string, sha?: string) {
-		const path = `src/site${filePath}`;
+		const relativePath = filePath.replace(VAULT_IMAGE_PATH_PREFIX, "");
+		const path = `${IMAGE_PATH_BASE}${relativePath}`;
 		await this.uploadToGithub(path, content, sha);
 	}
 
@@ -316,7 +261,7 @@ export default class Publisher {
 		remoteImageHashes: Record<string, string> = {},
 	) {
 		for (const image of assets.images) {
-			const hashKey = image.path.replace("/img/user/", "");
+			const hashKey = image.path.replace(VAULT_IMAGE_PATH_PREFIX, "");
 			const remoteHash = remoteImageHashes[hashKey];
 
 			if (
@@ -337,21 +282,21 @@ export default class Publisher {
 			new Notice(
 				"Config error: You need to define a GitHub repo in the plugin settings",
 			);
-			throw {};
+			throw new Error("GitHub repo is not configured");
 		}
 
 		if (!this.settings.githubUserName) {
 			new Notice(
 				"Config error: You need to define a GitHub Username in the plugin settings",
 			);
-			throw {};
+			throw new Error("GitHub username is not configured");
 		}
 
 		if (!this.settings.githubToken) {
 			new Notice(
 				"Config error: You need to define a GitHub Token in the plugin settings",
 			);
-			throw {};
+			throw new Error("GitHub token is not configured");
 		}
 	}
 }

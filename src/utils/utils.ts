@@ -75,21 +75,6 @@ function generateBlobHashFromBase64(base64Content: string) {
 	return sha1(wordArray).toString();
 }
 
-function kebabize(str: string) {
-	return str
-		.split("")
-		.map((letter, idx) => {
-			return letter.toUpperCase() === letter
-				? `${idx !== 0 ? "-" : ""}${letter.toLowerCase()}`
-				: letter;
-		})
-		.join("");
-}
-
-const wrapAround = (value: number, size: number): number => {
-	return ((value % size) + size) % size;
-};
-
 function getRewriteRules(pathRewriteRules: string): PathRewriteRules {
 	return pathRewriteRules
 		.split("\n")
@@ -119,10 +104,6 @@ function getGardenPathForNote(
 	}
 
 	return vaultPath;
-}
-
-function escapeRegExp(string: string) {
-	return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
 }
 
 function fixSvgForXmlSerializer(svgElement: SVGSVGElement): void {
@@ -158,11 +139,8 @@ export {
 	generateUrlPath,
 	generateBlobHash,
 	generateBlobHashFromBase64,
-	kebabize,
-	wrapAround,
 	getRewriteRules,
 	getGardenPathForNote,
-	escapeRegExp,
 	fixSvgForXmlSerializer,
 	sanitizePermalink,
 };

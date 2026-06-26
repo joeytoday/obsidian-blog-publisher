@@ -9,8 +9,7 @@ export default interface DigitalGardenSettings {
 
 	/**
 	 * The base path where notes will be published in the repository.
-	 * Default is "src/site/notes/" for backward compatibility.
-	 * User can configure this to publish to custom paths like "src/content/".
+	 * Default is "src/content/".
 	 */
 	contentBasePath: string;
 
@@ -26,10 +25,4 @@ export default interface DigitalGardenSettings {
 	ENABLE_DEVELOPER_TOOLS?: boolean;
 	devPluginPath?: string;
 	logLevel?: ILogLevel;
-
-	// Extended settings for custom path publishing
-	publishBasePath?: string;
-	typeDirectoryKey?: string;
-	subDirectoryKey?: string;
-	imagePublishPath?: string;
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getIcon } from "obsidian";
+	import { getIcon, Notice } from "obsidian";
 	import TreeNode from "../../models/TreeNode";
 	import {
 		IPublishStatusManager,
@@ -192,29 +192,41 @@
 
 		showPublishingView = true;
 
-		const allNotesToPublish = unpublishedToPublish.concat(changedToPublish);
+		try {
+			const allNotesToPublish =
+				unpublishedToPublish.concat(changedToPublish);
 
-		processingPaths = [...allNotesToPublish.map((note) => note.getPath())];
-		await publisher.publishBatch(allNotesToPublish);
+			processingPaths = [
+				...allNotesToPublish.map((note) => note.getPath()),
+			];
+			await publisher.publishBatch(allNotesToPublish);
 
-		publishedPaths = [...processingPaths];
-		processingPaths = [];
+			publishedPaths = [...processingPaths];
+			processingPaths = [];
 
-		for (const path of notesToDelete) {
-			processingPaths = [...processingPaths, path];
-			await publisher.deleteNote(path);
-			processingPaths = processingPaths.filter((p) => p !== path);
-			publishedPaths = [...publishedPaths, path];
+			for (const path of notesToDelete) {
+				processingPaths = [...processingPaths, path];
+				await publisher.deleteNote(path);
+
+				processingPaths = processingPaths.filter((p) => p !== path);
+				publishedPaths = [...publishedPaths, path];
+			}
+
+			for (const path of imagesToDelete) {
+				processingPaths = [...processingPaths, path];
+				await publisher.deleteImage(path);
+
+				processingPaths = processingPaths.filter((p) => p !== path);
+				publishedPaths = [...publishedPaths, path];
+			}
+			publishedPaths = [...publishedPaths, ...processingPaths];
+			processingPaths = [];
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			new Notice(`发布失败：${msg}`);
+			processingPaths = [];
+			showPublishingView = false;
 		}
-
-		for (const path of imagesToDelete) {
-			processingPaths = [...processingPaths, path];
-			await publisher.deleteImage(path);
-			processingPaths = processingPaths.filter((p) => p !== path);
-			publishedPaths = [...publishedPaths, path];
-		}
-		publishedPaths = [...publishedPaths, ...processingPaths];
-		processingPaths = [];
 	};
 
 	const emptyNode: TreeNode = {

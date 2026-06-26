@@ -63,11 +63,21 @@ export default class DigitalGarden extends Plugin {
 	onunload() {}
 
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			await this.loadData(),
-		);
+		const loaded = await this.loadData();
+		const merged = Object.assign({}, DEFAULT_SETTINGS, loaded);
+
+		// 迁移：旧配置可能有 publishBasePath，如果没有 contentBasePath 则沿用
+		if (
+			loaded &&
+			(loaded as Record<string, unknown>).publishBasePath &&
+			!loaded?.contentBasePath
+		) {
+			const path = (loaded as Record<string, unknown>)
+				.publishBasePath as string;
+			merged.contentBasePath = path.endsWith("/") ? path : path + "/";
+		}
+
+		this.settings = merged;
 	}
 
 	async saveSettings(): Promise<void> {
@@ -80,28 +90,47 @@ export default class DigitalGarden extends Plugin {
 			id: "quick-publish-and-share-note",
 			name: "快速发布并分享笔记",
 			callback: async () => {
+				if (this.isPublishing) {
+					new Notice("发布操作正在进行中，请等待完成。");
+
+					return;
+				}
+
 				new Notice("正在为笔记添加发布标记并发布...");
-				await this.setPublishFlagValue(true);
 				const activeFile = this.app.workspace.getActiveFile();
 
-				const event = this.app.metadataCache.on(
-					"changed",
-					async (file, _data, _cache) => {
-						if (file.path === activeFile?.path) {
-							const successfullyPublished =
-								await this.publishSingleNote();
+				if (activeFile) {
+					await new Promise<void>((resolve) => {
+						let resolved = false;
 
-							if (successfullyPublished) {
-								await this.copyGardenUrlToClipboard();
+						const handler = (file: { path: string }) => {
+							if (file.path === activeFile.path && !resolved) {
+								resolved = true;
+								this.app.metadataCache.offref(handler);
+								resolve();
 							}
-							this.app.metadataCache.offref(event);
-						}
-					},
-				);
+						};
+						this.app.metadataCache.on("changed", handler);
 
-				setTimeout(() => {
-					this.app.metadataCache.offref(event);
-				}, 5000);
+						setTimeout(() => {
+							if (!resolved) {
+								resolved = true;
+								this.app.metadataCache.offref(handler);
+								resolve();
+							}
+						}, 5000);
+
+						this.setPublishFlagValue(true);
+					});
+				} else {
+					await this.setPublishFlagValue(true);
+				}
+
+				const successfullyPublished = await this.publishSingleNote();
+
+				if (successfullyPublished) {
+					await this.copyGardenUrlToClipboard();
+				}
 			},
 		});
 
@@ -205,6 +234,14 @@ export default class DigitalGarden extends Plugin {
 
 	// 发布单篇笔记
 	async publishSingleNote(): Promise<boolean> {
+		if (this.isPublishing) {
+			new Notice("发布操作正在进行中，请等待完成。");
+
+			return false;
+		}
+
+		this.isPublishing = true;
+
 		try {
 			const { vault, workspace, metadataCache } = this.app;
 			const activeFile = this.getActiveFile(workspace);
@@ -246,10 +283,12 @@ export default class DigitalGarden extends Plugin {
 
 			return publishSuccessful;
 		} catch (e) {
-			console.error(e);
+			console.error(e instanceof Error ? e.message : String(e));
 			new Notice("发布失败，出现错误。");
 
 			return false;
+		} finally {
+			this.isPublishing = false;
 		}
 	}
 
@@ -300,8 +339,6 @@ export default class DigitalGarden extends Plugin {
 
 			if (totalItems === 0) {
 				new Notice("所有内容已是最新状态！");
-				statusBarItem.remove();
-				this.isPublishing = false;
 
 				return;
 			}
@@ -320,6 +357,7 @@ export default class DigitalGarden extends Plugin {
 
 			// 批量发布
 			await publisher.publishBatch(filesToPublish);
+
 			statusBar.incrementMultiple(filesToPublish.length);
 
 			// 批量删除笔记和图片（合并删除，只在最后触发一次部署）
@@ -350,13 +388,13 @@ export default class DigitalGarden extends Plugin {
 			if (imagesToDelete.length > 0) {
 				new Notice(`成功删除 ${imagesToDelete.length} 张图片！`);
 			}
-
-			this.isPublishing = false;
 		} catch (e) {
+			console.error(e instanceof Error ? e.message : String(e));
+			const msg = e instanceof Error ? e.message : String(e);
+			new Notice(`发布失败：${msg}`);
+		} finally {
 			statusBarItem.remove();
 			this.isPublishing = false;
-			console.error(e);
-			new Notice("发布失败，出现错误。");
 		}
 	}
 
@@ -373,7 +411,8 @@ export default class DigitalGarden extends Plugin {
 			this.app.metadataCache,
 			activeFile,
 		);
-		engine.set("pub-blog", value).apply();
+		engine.set("pub-blog", value);
+		await engine.apply();
 	}
 
 	// 切换发布标记
@@ -389,7 +428,8 @@ export default class DigitalGarden extends Plugin {
 			this.app.metadataCache,
 			activeFile,
 		);
-		engine.set("pub-blog", !engine.get("pub-blog")).apply();
+		engine.set("pub-blog", !engine.get("pub-blog"));
+		await engine.apply();
 	}
 
 	// 打开发布中心
