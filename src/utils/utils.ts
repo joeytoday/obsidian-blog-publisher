@@ -3,8 +3,32 @@ import slugify from "@sindresorhus/slugify";
 import sha1 from "crypto-js/sha1";
 import Latin1 from "crypto-js/enc-latin1";
 import { PathRewriteRules } from "../repositoryConnection/DigitalGardenSiteManager";
+import { VAULT_IMAGE_PATH_PREFIX } from "../constants";
 
 const REWRITE_RULE_DELIMITER = ":";
+
+function getErrorMessage(e: unknown): string {
+	return e instanceof Error ? e.message : String(e);
+}
+
+function normalizeGitPath(path: string): string {
+	return path.startsWith("/") ? path.slice(1) : path;
+}
+
+function stripVaultImagePrefix(path: string): string {
+	return path.replace(VAULT_IMAGE_PATH_PREFIX, "");
+}
+
+function shouldSkipUnchangedImage(
+	path: string,
+	localHash: string | undefined,
+	remoteImageHashes: Record<string, string>,
+): boolean {
+	const hashKey = stripVaultImagePrefix(path);
+	const remoteHash = remoteImageHashes[hashKey];
+
+	return !!(remoteHash && localHash && remoteHash === localHash);
+}
 
 function arrayBufferToBase64(buffer: ArrayBuffer) {
 	let binary = "";
@@ -75,21 +99,6 @@ function generateBlobHashFromBase64(base64Content: string) {
 	return sha1(wordArray).toString();
 }
 
-function kebabize(str: string) {
-	return str
-		.split("")
-		.map((letter, idx) => {
-			return letter.toUpperCase() === letter
-				? `${idx !== 0 ? "-" : ""}${letter.toLowerCase()}`
-				: letter;
-		})
-		.join("");
-}
-
-const wrapAround = (value: number, size: number): number => {
-	return ((value % size) + size) % size;
-};
-
 function getRewriteRules(pathRewriteRules: string): PathRewriteRules {
 	return pathRewriteRules
 		.split("\n")
@@ -119,10 +128,6 @@ function getGardenPathForNote(
 	}
 
 	return vaultPath;
-}
-
-function escapeRegExp(string: string) {
-	return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
 }
 
 function fixSvgForXmlSerializer(svgElement: SVGSVGElement): void {
@@ -158,11 +163,12 @@ export {
 	generateUrlPath,
 	generateBlobHash,
 	generateBlobHashFromBase64,
-	kebabize,
-	wrapAround,
 	getRewriteRules,
 	getGardenPathForNote,
-	escapeRegExp,
 	fixSvgForXmlSerializer,
 	sanitizePermalink,
+	getErrorMessage,
+	normalizeGitPath,
+	stripVaultImagePrefix,
+	shouldSkipUnchangedImage,
 };

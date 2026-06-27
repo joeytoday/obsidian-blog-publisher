@@ -13,17 +13,21 @@ import {
 } from "./RepositoryConnection";
 import Logger from "js-logger";
 import { TemplateUpdateChecker } from "./TemplateManager";
-import { IMAGE_PATH_BASE } from "../publisher/Publisher";
+import {
+	IMAGE_PATH_BASE,
+	DEFAULT_NOTE_PATH_BASE,
+	GITHUB_TREE_TYPE_BLOB,
+} from "../constants";
 import PublishPlatformConnectionFactory from "./PublishPlatformConnectionFactory";
 
 const logger = Logger.get("digital-garden-site-manager");
 
 /**
  * Get the base path for notes based on settings.
- * Falls back to "src/site/notes/" for backward compatibility if not set.
+ * Falls back to "src/content/" if not set.
  */
 export function getNotePathBase(settings: DigitalGardenSettings): string {
-	return settings.contentBasePath || "src/site/notes/";
+	return settings.contentBasePath || DEFAULT_NOTE_PATH_BASE;
 }
 
 export interface PathRewriteRule {
@@ -189,17 +193,15 @@ export default class DigitalGardenSiteManager {
 	async getNoteHashes(
 		contentTree: NonNullable<TRepositoryContent>,
 	): Promise<Record<string, string>> {
-		const files = contentTree.tree;
+		const files = contentTree.tree ?? [];
 
-		// Use the configured publishBasePath instead of hardcoded DEFAULT_NOTE_PATH_BASE
-		const basePath =
-			this.settings.publishBasePath || getNotePathBase(this.settings);
+		const basePath = getNotePathBase(this.settings);
 
 		const notes = files.filter(
 			(x): x is ContentTreeItem =>
 				typeof x.path === "string" &&
 				x.path.startsWith(basePath) &&
-				x.type === "blob" &&
+				x.type === GITHUB_TREE_TYPE_BLOB &&
 				x.path !== `${basePath}notes.json`,
 		);
 		const hashes: Record<string, string> = {};
@@ -217,19 +219,16 @@ export default class DigitalGardenSiteManager {
 	): Promise<Record<string, string>> {
 		const files = contentTree.tree ?? [];
 
-		// Use the configured image path instead of hardcoded IMAGE_PATH_BASE
-		const imageBasePath = this.settings.imagePublishPath || IMAGE_PATH_BASE;
-
 		const images = files.filter(
 			(x): x is ContentTreeItem =>
 				typeof x.path === "string" &&
-				x.path.startsWith(imageBasePath) &&
-				x.type === "blob",
+				x.path.startsWith(IMAGE_PATH_BASE) &&
+				x.type === GITHUB_TREE_TYPE_BLOB,
 		);
 		const hashes: Record<string, string> = {};
 
 		for (const img of images) {
-			const vaultPath = img.path.replace(imageBasePath, "");
+			const vaultPath = img.path.replace(IMAGE_PATH_BASE, "");
 			hashes[vaultPath] = img.sha;
 		}
 
