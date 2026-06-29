@@ -1,29 +1,42 @@
 import { Notice, Plugin, Workspace, addIcon } from "obsidian";
 import Publisher from "./src/publisher/Publisher";
-import DigitalGardenSettings from "./src/models/settings";
+import BlogPublisherSettings from "./src/models/settings";
 import { PublishStatusBar } from "./src/views/PublishStatusBar";
-import { seedling } from "./src/ui/suggest/constants";
+import { publisherIcon } from "./src/ui/suggest/constants";
 import { PublicationCenter } from "./src/views/PublicationCenter/PublicationCenter";
 import PublishStatusManager from "./src/publisher/PublishStatusManager";
-import DigitalGardenSiteManager from "./src/repositoryConnection/DigitalGardenSiteManager";
-import { DigitalGardenSettingTab } from "./src/views/DigitalGardenSettingTab";
+import SiteManager from "./src/repositoryConnection/SiteManager";
+import { BlogPublisherSettingTab } from "./src/views/BlogPublisherSettingTab";
 import Logger from "js-logger";
 import { PublishFile } from "./src/publishFile/PublishFile";
 import { ObsidianFrontMatterEngine } from "./src/publishFile/ObsidianFrontMatterEngine";
-import { DEFAULT_NOTE_PATH_BASE } from "./src/constants";
-import { getErrorMessage } from "./src/utils/utils";
+import {
+	DEFAULT_NOTE_PATH_BASE,
+	DEFAULT_IMAGE_PATH,
+	DEFAULT_IMAGE_URL_PREFIX,
+} from "./src/constants";
+import {
+	extractBaseUrl,
+	generateUrlPath,
+	getErrorMessage,
+	getRewrittenPath,
+	getRewriteRules,
+} from "./src/utils/utils";
 
-const DEFAULT_SETTINGS: DigitalGardenSettings = {
+const DEFAULT_SETTINGS: BlogPublisherSettings = {
 	githubRepo: "",
 	githubToken: "",
 	githubUserName: "",
 	contentBasePath: DEFAULT_NOTE_PATH_BASE,
-	gardenBaseUrl: "",
+	imagePath: DEFAULT_IMAGE_PATH,
+	imageUrlPrefix: DEFAULT_IMAGE_URL_PREFIX,
+	siteUrl: "",
 	prHistory: [],
-	siteName: "Digital Garden",
+	siteName: "Blog Publisher",
 	pathRewriteRules: "",
 	publishPlatform:
-		"SelfHosted" as unknown as DigitalGardenSettings["publishPlatform"],
+		"SelfHosted" as unknown as BlogPublisherSettings["publishPlatform"],
+	workflowFileName: "",
 	logLevel: undefined,
 };
 
@@ -31,31 +44,31 @@ Logger.useDefaults({
 	defaultLevel: Logger.WARN,
 	formatter: function (messages, _context) {
 		messages.unshift(new Date().toUTCString());
-		messages.unshift("DG: ");
+		messages.unshift("BP: ");
 	},
 });
 
-export default class DigitalGarden extends Plugin {
-	settings!: DigitalGardenSettings;
+export default class BlogPublisher extends Plugin {
+	settings!: BlogPublisherSettings;
 	appVersion!: string;
 	publishModal!: PublicationCenter;
 	isPublishing: boolean = false;
 
 	async onload() {
 		this.appVersion = this.manifest.version;
-		console.log("Initializing DigitalGarden plugin v" + this.appVersion);
+		console.log("Initializing BlogPublisher plugin v" + this.appVersion);
 		await this.loadSettings();
 
 		this.settings.logLevel && Logger.setLevel(this.settings.logLevel);
 
-		Logger.info("Digital garden log level set to " + Logger.getLevel().name);
+		Logger.info("Blog publisher log level set to " + Logger.getLevel().name);
 
-		this.addSettingTab(new DigitalGardenSettingTab(this.app, this));
+		this.addSettingTab(new BlogPublisherSettingTab(this.app, this));
 		await this.addCommands();
 
-		addIcon("digital-garden-icon", seedling);
+		addIcon("blog-publisher-icon", publisherIcon);
 
-		this.addRibbonIcon("digital-garden-icon", "打开发布中心", async () => {
+		this.addRibbonIcon("blog-publisher-icon", "打开发布中心", async () => {
 			this.openPublishModal();
 		});
 	}
@@ -75,6 +88,16 @@ export default class DigitalGarden extends Plugin {
 			const path = (loaded as Record<string, unknown>)
 				.publishBasePath as string;
 			merged.contentBasePath = path.endsWith("/") ? path : path + "/";
+		}
+
+		// 迁移：gardenBaseUrl → siteUrl
+		if (
+			loaded &&
+			(loaded as Record<string, unknown>).gardenBaseUrl &&
+			!merged.siteUrl
+		) {
+			merged.siteUrl = (loaded as Record<string, unknown>)
+				.gardenBaseUrl as string;
 		}
 
 		this.settings = merged;
@@ -129,7 +152,7 @@ export default class DigitalGarden extends Plugin {
 				const successfullyPublished = await this.publishSingleNote();
 
 				if (successfullyPublished) {
-					await this.copyGardenUrlToClipboard();
+					await this.copyNoteUrlToClipboard();
 				}
 			},
 		});
@@ -152,18 +175,18 @@ export default class DigitalGarden extends Plugin {
 			},
 		});
 
-		// 复制花园URL
+		// 复制笔记URL
 		this.addCommand({
-			id: "copy-garden-url",
-			name: "复制花园URL",
+			id: "copy-note-url",
+			name: "复制笔记URL",
 			callback: async () => {
-				await this.copyGardenUrlToClipboard();
+				await this.copyNoteUrlToClipboard();
 			},
 		});
 
 		// 打开发布中心
 		this.addCommand({
-			id: "dg-open-publish-modal",
+			id: "bp-open-publish-modal",
 			name: "打开发布中心",
 			callback: async () => {
 				this.openPublishModal();
@@ -172,7 +195,7 @@ export default class DigitalGarden extends Plugin {
 
 		// 添加发布标记
 		this.addCommand({
-			id: "dg-mark-note-for-publish",
+			id: "bp-mark-note-for-publish",
 			name: "添加发布标记",
 			callback: async () => {
 				this.setPublishFlagValue(true);
@@ -181,7 +204,7 @@ export default class DigitalGarden extends Plugin {
 
 		// 移除发布标记
 		this.addCommand({
-			id: "dg-unmark-note-for-publish",
+			id: "bp-unmark-note-for-publish",
 			name: "移除发布标记",
 			callback: async () => {
 				this.setPublishFlagValue(false);
@@ -190,7 +213,7 @@ export default class DigitalGarden extends Plugin {
 
 		// 切换发布状态
 		this.addCommand({
-			id: "dg-mark-toggle-publish-status",
+			id: "bp-mark-toggle-publish-status",
 			name: "切换发布状态",
 			callback: async () => {
 				this.togglePublishFlag();
@@ -210,7 +233,7 @@ export default class DigitalGarden extends Plugin {
 		return activeFile;
 	}
 
-	async copyGardenUrlToClipboard() {
+	async copyNoteUrlToClipboard() {
 		try {
 			const { metadataCache, workspace } = this.app;
 			const activeFile = this.getActiveFile(workspace);
@@ -219,11 +242,21 @@ export default class DigitalGarden extends Plugin {
 				return;
 			}
 
-			const siteManager = new DigitalGardenSiteManager(
-				metadataCache,
-				this.settings,
-			);
-			const fullUrl = siteManager.getNoteUrl(activeFile);
+			const baseUrl = extractBaseUrl(this.settings.siteUrl);
+			const rewriteRules = getRewriteRules(this.settings.pathRewriteRules);
+
+			const rewrittenPath = getRewrittenPath(activeFile.path, rewriteRules);
+
+			const frontmatter = metadataCache.getCache(activeFile.path)?.frontmatter;
+			const permalink = frontmatter?.permalink as string | undefined;
+
+			const noteUrlPath = permalink
+				? permalink.startsWith("/")
+					? permalink.slice(1)
+					: permalink
+				: generateUrlPath(rewrittenPath, true);
+
+			const fullUrl = `https://${baseUrl}/${noteUrlPath}`;
 			await navigator.clipboard.writeText(fullUrl);
 			new Notice(`笔记URL已复制到剪贴板`);
 		} catch (e) {
@@ -273,6 +306,17 @@ export default class DigitalGarden extends Plugin {
 
 			if (publishSuccessful) {
 				new Notice("笔记发布成功！");
+
+				if (this.settings.workflowFileName) {
+					try {
+						const siteManager = new SiteManager(metadataCache, this.settings);
+						await siteManager.triggerWorkflow();
+						new Notice("已触发部署工作流。");
+					} catch (e) {
+						console.error(getErrorMessage(e));
+						new Notice("触发部署工作流失败。");
+					}
+				}
 			}
 
 			return publishSuccessful;
@@ -304,10 +348,7 @@ export default class DigitalGarden extends Plugin {
 			const publisher = new Publisher(vault, metadataCache, this.settings);
 			publisher.validateSettings();
 
-			const siteManager = new DigitalGardenSiteManager(
-				metadataCache,
-				this.settings,
-			);
+			const siteManager = new SiteManager(metadataCache, this.settings);
 
 			const publishStatusManager = new PublishStatusManager(
 				siteManager,
@@ -371,6 +412,16 @@ export default class DigitalGarden extends Plugin {
 			if (imagesToDelete.length > 0) {
 				new Notice(`成功删除 ${imagesToDelete.length} 张图片！`);
 			}
+
+			if (this.settings.workflowFileName) {
+				try {
+					await siteManager.triggerWorkflow();
+					new Notice("已触发部署工作流。");
+				} catch (e) {
+					console.error(getErrorMessage(e));
+					new Notice("触发部署工作流失败。");
+				}
+			}
 		} catch (e) {
 			const msg = getErrorMessage(e);
 			console.error(msg);
@@ -418,7 +469,7 @@ export default class DigitalGarden extends Plugin {
 	// 打开发布中心
 	openPublishModal() {
 		if (!this.publishModal) {
-			const siteManager = new DigitalGardenSiteManager(
+			const siteManager = new SiteManager(
 				this.app.metadataCache,
 				this.settings,
 			);

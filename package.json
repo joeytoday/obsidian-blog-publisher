@@ -1,11 +1,10 @@
 {
 	"name": "obsidian-blog-publisher",
-	"version": "1.2.7",
-	"description": "A plugin used for publishing notes to a digital garden",
+	"version": "1.2.8",
+	"description": "Publish Obsidian notes to any GitHub-hosted blog",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"postdev": "node scripts/generateGardenSettings.mjs",
 		"build": "node esbuild.config.mjs production",
 		"test": "jest",
 		"prepare": "husky install",

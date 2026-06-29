@@ -2,7 +2,7 @@ import { MetadataCache, Notice, TFile, Vault } from "obsidian";
 import { Base64 } from "js-base64";
 import {
 	getRewriteRules,
-	getGardenPathForNote,
+	getRewrittenPath,
 	stripVaultImagePrefix,
 	shouldSkipUnchangedImage,
 	PathRewriteRules,
@@ -11,16 +11,15 @@ import {
 	hasPublishFlag,
 	isPublishFrontmatterValid,
 } from "../publishFile/Validator";
-import DigitalGardenSiteManager, {
+import SiteManager, {
 	getNotePathBase,
-} from "../repositoryConnection/DigitalGardenSiteManager";
-import DigitalGardenSettings from "../models/settings";
+} from "../repositoryConnection/SiteManager";
+import BlogPublisherSettings from "../models/settings";
 import { CompiledPublishFile, PublishFile } from "../publishFile/PublishFile";
-import { Assets, GardenPageCompiler } from "../compiler/GardenPageCompiler";
+import { Assets, MarkdownCompiler } from "../compiler/MarkdownCompiler";
 import Logger from "js-logger";
 import { RepositoryConnection } from "../repositoryConnection/RepositoryConnection";
 import PublishPlatformConnectionFactory from "../repositoryConnection/PublishPlatformConnectionFactory";
-import { IMAGE_PATH_BASE } from "../constants";
 
 export interface MarkedForPublishing {
 	notes: PublishFile[];
@@ -33,21 +32,21 @@ export interface MarkedForPublishing {
 export default class Publisher {
 	vault: Vault;
 	metadataCache: MetadataCache;
-	compiler: GardenPageCompiler;
-	settings: DigitalGardenSettings;
+	compiler: MarkdownCompiler;
+	settings: BlogPublisherSettings;
 	rewriteRules: PathRewriteRules;
 
 	constructor(
 		vault: Vault,
 		metadataCache: MetadataCache,
-		settings: DigitalGardenSettings,
+		settings: BlogPublisherSettings,
 	) {
 		this.vault = vault;
 		this.metadataCache = metadataCache;
 		this.settings = settings;
 		this.rewriteRules = getRewriteRules(settings.pathRewriteRules);
 
-		this.compiler = new GardenPageCompiler(vault, settings, metadataCache, () =>
+		this.compiler = new MarkdownCompiler(vault, settings, metadataCache, () =>
 			this.getFilesMarkedForPublishing(),
 		);
 	}
@@ -99,18 +98,18 @@ export default class Publisher {
 	}
 
 	async deleteImage(vaultFilePath: string, sha?: string) {
-		const path = `${IMAGE_PATH_BASE}${vaultFilePath}`;
+		const path = `${this.settings.imagePath}${vaultFilePath}`;
 
 		return await this.delete(path, sha);
 	}
 
-	/** If provided with sha, garden connection does not need to get it seperately! */
+	/** If provided with sha, repository connection does not need to get it seperately! */
 	public async delete(path: string, sha?: string): Promise<boolean> {
 		this.validateSettings();
 
-		const userGardenConnection = await this.getConnection();
+		const userConnection = await this.getConnection();
 
-		const deleted = await userGardenConnection.deleteFile(path, {
+		const deleted = await userConnection.deleteFile(path, {
 			sha,
 		});
 
@@ -136,10 +135,10 @@ export default class Publisher {
 			return true;
 		}
 
-		const userGardenConnection = await this.getConnection();
+		const userConnection = await this.getConnection();
 
 		const notePathBase = getNotePathBase(this.settings);
-		await userGardenConnection.deleteFiles(filePaths, notePathBase);
+		await userConnection.deleteFiles(filePaths, notePathBase);
 
 		return true;
 	}
@@ -153,12 +152,12 @@ export default class Publisher {
 			return true;
 		}
 
-		const userGardenConnection = await this.getConnection();
+		const userConnection = await this.getConnection();
 
 		const remoteImageHashes = await this.getRemoteImageHashes();
 		const notePathBase = getNotePathBase(this.settings);
 
-		await userGardenConnection.updateFiles(
+		await userConnection.updateFiles(
 			filesToPublish,
 			remoteImageHashes,
 			notePathBase,
@@ -169,9 +168,9 @@ export default class Publisher {
 	}
 
 	private async getRemoteImageHashes(): Promise<Record<string, string>> {
-		const userGardenConnection = await this.getConnection();
+		const userConnection = await this.getConnection();
 
-		const contentTree = await userGardenConnection
+		const contentTree = await userConnection
 			.getContent("HEAD")
 			.catch(() => undefined);
 
@@ -179,10 +178,7 @@ export default class Publisher {
 			return {};
 		}
 
-		const siteManager = new DigitalGardenSiteManager(
-			this.metadataCache,
-			this.settings,
-		);
+		const siteManager = new SiteManager(this.metadataCache, this.settings);
 
 		return siteManager.getImageHashes(contentTree);
 	}
@@ -203,10 +199,10 @@ export default class Publisher {
 		this.validateSettings();
 		let message = `Update content ${path}`;
 
-		const userGardenConnection = await this.getConnection();
+		const userConnection = await this.getConnection();
 
 		if (!remoteFileHash) {
-			const file = await userGardenConnection.getFile(path).catch(() => {
+			const file = await userConnection.getFile(path).catch(() => {
 				Logger.info(`File ${path} does not exist, adding`);
 			});
 			remoteFileHash = file?.sha;
@@ -216,7 +212,7 @@ export default class Publisher {
 			}
 		}
 
-		return await userGardenConnection.updateFile({
+		return await userConnection.updateFile({
 			content,
 			path,
 			message,
@@ -228,15 +224,18 @@ export default class Publisher {
 		content = Base64.encode(content);
 
 		const basePath = getNotePathBase(this.settings);
-		const gardenPath = getGardenPathForNote(filePath, this.rewriteRules);
-		const publishPath = `${basePath}${gardenPath}`;
+		const rewrittenPath = getRewrittenPath(filePath, this.rewriteRules);
+		const publishPath = `${basePath}${rewrittenPath}`;
 
 		await this.uploadToGithub(publishPath, content, sha);
 	}
 
 	private async uploadImage(filePath: string, content: string, sha?: string) {
-		const relativePath = stripVaultImagePrefix(filePath);
-		const path = `${IMAGE_PATH_BASE}${relativePath}`;
+		const relativePath = stripVaultImagePrefix(
+			filePath,
+			this.settings.imageUrlPrefix,
+		);
+		const path = `${this.settings.imagePath}${relativePath}`;
 		await this.uploadToGithub(path, content, sha);
 	}
 
@@ -246,7 +245,12 @@ export default class Publisher {
 	) {
 		for (const image of assets.images) {
 			if (
-				shouldSkipUnchangedImage(image.path, image.localHash, remoteImageHashes)
+				shouldSkipUnchangedImage(
+					image.path,
+					image.localHash,
+					remoteImageHashes,
+					this.settings.imageUrlPrefix,
+				)
 			) {
 				Logger.debug(`Skipping unchanged image: ${image.path}`);
 				continue;
@@ -255,7 +259,9 @@ export default class Publisher {
 			await this.uploadImage(
 				image.path,
 				image.content,
-				remoteImageHashes[stripVaultImagePrefix(image.path)],
+				remoteImageHashes[
+					stripVaultImagePrefix(image.path, this.settings.imageUrlPrefix)
+				],
 			);
 		}
 	}

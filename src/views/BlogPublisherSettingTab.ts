@@ -1,12 +1,11 @@
 import { PluginSettingTab, App } from "obsidian";
-import DigitalGarden from "../../main";
+import BlogPublisher from "../../main";
 import SettingView from "./SettingsView/SettingView";
-import { UpdateGardenRepositoryModal } from "./UpdateGardenRepositoryModal";
 
-export class DigitalGardenSettingTab extends PluginSettingTab {
-	plugin: DigitalGarden;
+export class BlogPublisherSettingTab extends PluginSettingTab {
+	plugin: BlogPublisher;
 
-	constructor(app: App, plugin: DigitalGarden) {
+	constructor(app: App, plugin: BlogPublisher) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -20,7 +19,6 @@ export class DigitalGardenSettingTab extends PluginSettingTab {
 			this.plugin.settings,
 			async () => await this.plugin.saveData(this.plugin.settings),
 		);
-		const prModal = new UpdateGardenRepositoryModal(this.app);
-		await settingView.initialize(prModal);
+		await settingView.initialize();
 	}
 }

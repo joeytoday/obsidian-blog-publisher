@@ -2,7 +2,7 @@ import { Base64 } from "js-base64";
 import slugify from "@sindresorhus/slugify";
 import sha1 from "crypto-js/sha1";
 import Latin1 from "crypto-js/enc-latin1";
-import { VAULT_IMAGE_PATH_PREFIX } from "../constants";
+import { DEFAULT_IMAGE_URL_PREFIX } from "../constants";
 
 const REWRITE_RULE_DELIMITER = ":";
 
@@ -21,16 +21,20 @@ function normalizeGitPath(path: string): string {
 	return path.startsWith("/") ? path.slice(1) : path;
 }
 
-function stripVaultImagePrefix(path: string): string {
-	return path.replace(VAULT_IMAGE_PATH_PREFIX, "");
+function stripVaultImagePrefix(
+	path: string,
+	prefix: string = DEFAULT_IMAGE_URL_PREFIX,
+): string {
+	return path.replace(prefix, "");
 }
 
 function shouldSkipUnchangedImage(
 	path: string,
 	localHash: string | undefined,
 	remoteImageHashes: Record<string, string>,
+	prefix: string = DEFAULT_IMAGE_URL_PREFIX,
 ): boolean {
-	const hashKey = stripVaultImagePrefix(path);
+	const hashKey = stripVaultImagePrefix(path, prefix);
 	const remoteHash = remoteImageHashes[hashKey];
 
 	return !!(remoteHash && localHash && remoteHash === localHash);
@@ -115,10 +119,7 @@ function getRewriteRules(pathRewriteRules: string): PathRewriteRules {
 		});
 }
 
-function getGardenPathForNote(
-	vaultPath: string,
-	rules: PathRewriteRules,
-): string {
+function getRewrittenPath(vaultPath: string, rules: PathRewriteRules): string {
 	for (const { from, to } of rules) {
 		if (vaultPath && vaultPath.startsWith(from)) {
 			const newPath = vaultPath.replace(from, to);
@@ -169,7 +170,7 @@ export {
 	generateBlobHash,
 	generateBlobHashFromBase64,
 	getRewriteRules,
-	getGardenPathForNote,
+	getRewrittenPath,
 	fixSvgForXmlSerializer,
 	sanitizePermalink,
 	getErrorMessage,

@@ -3,18 +3,14 @@ import Logger from "js-logger";
 import { CompiledPublishFile } from "../publishFile/PublishFile";
 import { IPublishPlatformConnection } from "../models/IPublishPlatformConnection";
 import {
-	getGardenPathForNote,
+	getRewrittenPath,
 	normalizeGitPath,
 	stripVaultImagePrefix,
 	shouldSkipUnchangedImage,
 	PathRewriteRules,
 } from "../utils/utils";
 
-import {
-	GITHUB_FILE_MODE,
-	GITHUB_TREE_TYPE_BLOB,
-	IMAGE_PATH_BASE,
-} from "../constants";
+import { GITHUB_FILE_MODE, GITHUB_TREE_TYPE_BLOB } from "../constants";
 
 const logger = Logger.get("repository-connection");
 
@@ -29,12 +25,22 @@ interface IPutPayload {
 export class RepositoryConnection {
 	private userName: string;
 	private pageName: string;
+	private imagePath: string;
+	private imageUrlPrefix: string;
 	octokit: Octokit;
 
-	constructor({ octoKit, userName, pageName }: IPublishPlatformConnection) {
+	constructor({
+		octoKit,
+		userName,
+		pageName,
+		imagePath,
+		imageUrlPrefix,
+	}: IPublishPlatformConnection) {
 		this.pageName = pageName;
 		this.userName = userName;
 		this.octokit = octoKit;
+		this.imagePath = imagePath;
+		this.imageUrlPrefix = imageUrlPrefix;
 	}
 
 	getRepositoryName() {
@@ -223,7 +229,7 @@ export class RepositoryConnection {
 				return `${notePathBase}${normalizeGitPath(path)}`;
 			}
 
-			return `${IMAGE_PATH_BASE}${normalizeGitPath(path)}`;
+			return `${this.imagePath}${normalizeGitPath(path)}`;
 		});
 
 		// Use base_tree + sha: null to mark files for deletion.
@@ -270,7 +276,7 @@ export class RepositoryConnection {
 			const filePath = file.getPath();
 
 			const rewrittenPath = rewriteRules
-				? getGardenPathForNote(filePath, rewriteRules)
+				? getRewrittenPath(filePath, rewriteRules)
 				: filePath;
 
 			return {
@@ -295,7 +301,12 @@ export class RepositoryConnection {
 
 		const imagesToUpload = Array.from(uniqueImages.values()).filter((asset) => {
 			if (
-				shouldSkipUnchangedImage(asset.path, asset.localHash, remoteImageHashes)
+				shouldSkipUnchangedImage(
+					asset.path,
+					asset.localHash,
+					remoteImageHashes,
+					this.imageUrlPrefix,
+				)
 			) {
 				logger.debug(`Skipping unchanged image: ${asset.path}`);
 
@@ -309,8 +320,8 @@ export class RepositoryConnection {
 			const sha = await this.createBlob(asset.content, "base64");
 
 			return {
-				path: `${IMAGE_PATH_BASE}${normalizeGitPath(
-					stripVaultImagePrefix(asset.path),
+				path: `${this.imagePath}${normalizeGitPath(
+					stripVaultImagePrefix(asset.path, this.imageUrlPrefix),
 				)}`,
 				mode: GITHUB_FILE_MODE,
 				type: GITHUB_TREE_TYPE_BLOB,

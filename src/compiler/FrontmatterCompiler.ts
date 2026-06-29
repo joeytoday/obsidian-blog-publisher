@@ -1,17 +1,14 @@
 import { FrontMatterCache } from "obsidian";
 import {
-	getGardenPathForNote,
-	sanitizePermalink,
 	generateUrlPath,
+	getRewrittenPath,
 	getRewriteRules,
 	PathRewriteRules,
 } from "../utils/utils";
-import DigitalGardenSettings from "../models/settings";
+import BlogPublisherSettings from "../models/settings";
 import { PublishFile } from "../publishFile/PublishFile";
 
 export type TFrontmatter = Record<string, unknown> & {
-	"dg-path"?: string;
-	"dg-permalink"?: string;
 	tags?: string;
 };
 
@@ -21,10 +18,10 @@ type TPublishedFrontMatter = Record<string, unknown> & {
 };
 
 export class FrontmatterCompiler {
-	private readonly settings: DigitalGardenSettings;
+	private readonly settings: BlogPublisherSettings;
 	private readonly rewriteRules: PathRewriteRules;
 
-	constructor(settings: DigitalGardenSettings) {
+	constructor(settings: BlogPublisherSettings) {
 		this.settings = settings;
 		this.rewriteRules = getRewriteRules(settings.pathRewriteRules);
 	}
@@ -66,24 +63,13 @@ export class FrontmatterCompiler {
 	) {
 		const publishedFrontMatter = { ...newFrontMatter };
 
-		const gardenPath =
-			baseFrontMatter && baseFrontMatter["dg-path"]
-				? baseFrontMatter["dg-path"]
-				: getGardenPathForNote(filePath, this.rewriteRules);
+		const rewrittenPath = getRewrittenPath(filePath, this.rewriteRules);
 
-		if (gardenPath != filePath) {
-			publishedFrontMatter["dg-path"] = gardenPath;
-		}
-
-		if (baseFrontMatter && baseFrontMatter["dg-permalink"]) {
-			publishedFrontMatter["dg-permalink"] = baseFrontMatter["dg-permalink"];
-
-			publishedFrontMatter["permalink"] = sanitizePermalink(
-				baseFrontMatter["dg-permalink"],
-			);
+		if (baseFrontMatter?.permalink) {
+			publishedFrontMatter["permalink"] = baseFrontMatter.permalink as string;
 		} else {
 			publishedFrontMatter["permalink"] =
-				"/" + generateUrlPath(gardenPath, true);
+				"/" + generateUrlPath(rewrittenPath, true);
 		}
 
 		return publishedFrontMatter;

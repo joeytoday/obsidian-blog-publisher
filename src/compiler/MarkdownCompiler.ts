@@ -6,19 +6,18 @@ import {
 	arrayBufferToBase64,
 	getLinkpath,
 } from "obsidian";
-import DigitalGardenSettings from "../models/settings";
+import BlogPublisherSettings from "../models/settings";
 import {
 	fixSvgForXmlSerializer,
 	generateBlobHashFromBase64,
 	generateUrlPath,
-	getGardenPathForNote,
+	getRewrittenPath,
 	getRewriteRules,
 	sanitizePermalink,
 	PathRewriteRule,
 } from "../utils/utils";
 import slugify from "@sindresorhus/slugify";
 import { fixMarkdownHeaderSyntax } from "../utils/markdown";
-import { VAULT_IMAGE_PATH_PREFIX } from "../constants";
 import {
 	CODEBLOCK_REGEX,
 	CODE_FENCE_REGEX,
@@ -59,9 +58,9 @@ export type TCompilerStep = (
 	| ((partiallyCompiledContent: string) => Promise<string>)
 	| ((partiallyCompiledContent: string) => string);
 
-export class GardenPageCompiler {
+export class MarkdownCompiler {
 	private readonly vault: Vault;
-	private readonly settings: DigitalGardenSettings;
+	private readonly settings: BlogPublisherSettings;
 	private metadataCache: MetadataCache;
 	private readonly getFilesMarkedForPublishing: GetFilesMarkedForPublishing;
 
@@ -69,7 +68,7 @@ export class GardenPageCompiler {
 
 	constructor(
 		vault: Vault,
-		settings: DigitalGardenSettings,
+		settings: BlogPublisherSettings,
 		metadataCache: MetadataCache,
 		getFilesMarkedForPublishing: GetFilesMarkedForPublishing,
 	) {
@@ -414,15 +413,15 @@ export class GardenPageCompiler {
 
 						if (publishedFilesContainsLinkedFile) {
 							const permalink =
-								metadata?.frontmatter && metadata.frontmatter["dg-permalink"];
+								metadata?.frontmatter && metadata.frontmatter["permalink"];
 
-							const gardenPath = permalink
+							const rewrittenPath = permalink
 								? sanitizePermalink(permalink)
 								: `/${generateUrlPath(
-										getGardenPathForNote(linkedFile.path, this.rewriteRules),
+										getRewrittenPath(linkedFile.path, this.rewriteRules),
 										true,
 								  )}`;
-							embedded_link = `<a class="markdown-embed-link" href="${gardenPath}${sectionID}" aria-label="Open link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a>`;
+							embedded_link = `<a class="markdown-embed-link" href="${rewrittenPath}${sectionID}" aria-label="Open link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a>`;
 						}
 
 						fileText =
@@ -708,7 +707,7 @@ export class GardenPageCompiler {
 						const image = await this.vault.readBinary(linkedFile);
 						const imageBase64 = arrayBufferToBase64(image);
 
-						const cmsImgPath = `${VAULT_IMAGE_PATH_PREFIX}${linkedFile.path}`;
+						const cmsImgPath = `${this.settings.imageUrlPrefix}${linkedFile.path}`;
 						let name = "";
 
 						if (metaData && size) {
@@ -794,7 +793,7 @@ export class GardenPageCompiler {
 						}
 						const image = await this.vault.readBinary(linkedFile);
 						const imageBase64 = arrayBufferToBase64(image);
-						const cmsImgPath = `${VAULT_IMAGE_PATH_PREFIX}${linkedFile.path}`;
+						const cmsImgPath = `${this.settings.imageUrlPrefix}${linkedFile.path}`;
 
 						const imageMarkdown = `![${imageName}](${encodeURI(cmsImgPath)})`;
 
@@ -866,7 +865,7 @@ export class GardenPageCompiler {
 						continue;
 					}
 
-					const cmsImgPath = `${VAULT_IMAGE_PATH_PREFIX}${linkedFile.path}`;
+					const cmsImgPath = `${this.settings.imageUrlPrefix}${linkedFile.path}`;
 
 					const imageMarkdown = `[${linkDisplayName}](${encodeURI(
 						cmsImgPath,
@@ -954,7 +953,7 @@ export class GardenPageCompiler {
 
 						const pdfBinary = await this.vault.readBinary(linkedFile);
 						const pdfBase64 = arrayBufferToBase64(pdfBinary);
-						const cmsPdfPath = `${VAULT_IMAGE_PATH_PREFIX}${linkedFile.path}`;
+						const cmsPdfPath = `${this.settings.imageUrlPrefix}${linkedFile.path}`;
 
 						assets.push({
 							path: cmsPdfPath,
@@ -1043,7 +1042,7 @@ export class GardenPageCompiler {
 
 						const pdfBinary = await this.vault.readBinary(linkedFile);
 						const pdfBase64 = arrayBufferToBase64(pdfBinary);
-						const cmsPdfPath = `${VAULT_IMAGE_PATH_PREFIX}${linkedFile.path}`;
+						const cmsPdfPath = `${this.settings.imageUrlPrefix}${linkedFile.path}`;
 
 						assets.push({
 							path: cmsPdfPath,

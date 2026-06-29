@@ -1,13 +1,5 @@
-import {
-	App,
-	debounce,
-	getIcon,
-	MetadataCache,
-	Modal,
-	Setting,
-} from "obsidian";
-import DigitalGardenSiteManager from "../../repositoryConnection/DigitalGardenSiteManager";
-import DigitalGardenSettings from "../../models/settings";
+import { App, getIcon, Setting } from "obsidian";
+import BlogPublisherSettings from "../../models/settings";
 import { GithubSettings } from "./GithubSettings";
 import Logger from "js-logger";
 import { PublishPlatform } from "../../models/PublishPlatform";
@@ -15,27 +7,20 @@ import Publisher from "../../publisher/Publisher";
 
 export default class SettingView {
 	private app: App;
-	private prModal: Modal | undefined;
-	settings: DigitalGardenSettings;
+	settings: BlogPublisherSettings;
 	saveSettings: () => Promise<void>;
 	private settingsRootElement: HTMLElement;
 	private publisher: Publisher;
 
-	debouncedSaveAndUpdate = debounce(
-		this.saveSiteSettingsAndUpdateEnv,
-		500,
-		true,
-	);
-
 	constructor(
 		app: App,
 		settingsRootElement: HTMLElement,
-		settings: DigitalGardenSettings,
+		settings: BlogPublisherSettings,
 		saveSettings: () => Promise<void>,
 	) {
 		this.app = app;
 		this.settingsRootElement = settingsRootElement;
-		this.settingsRootElement.classList.add("dg-settings");
+		this.settingsRootElement.classList.add("bp-settings");
 		this.settings = settings;
 		this.saveSettings = saveSettings;
 		this.publisher = new Publisher(app.vault, app.metadataCache, settings);
@@ -45,12 +30,11 @@ export default class SettingView {
 		return getIcon(name) ?? document.createElement("span");
 	}
 
-	async initialize(prModal: Modal) {
-		this.prModal = prModal;
+	async initialize() {
 		this.settingsRootElement.empty();
 
 		this.settingsRootElement.createEl("h1", {
-			text: "数字花园发布设置",
+			text: "博客发布设置",
 		});
 
 		const linkDiv = this.settingsRootElement.createEl("div", {
@@ -160,8 +144,6 @@ export default class SettingView {
 						await this.saveSettings();
 					});
 			});
-
-		prModal.titleEl.createEl("h1", "站点模板设置");
 	}
 
 	private initializePublishPlatformSettings(target: HTMLElement) {
@@ -176,15 +158,5 @@ export default class SettingView {
 				cls: "setting-item-name",
 			});
 		}
-	}
-
-	async saveSiteSettingsAndUpdateEnv(
-		metadataCache: MetadataCache,
-		settings: DigitalGardenSettings,
-		saveSettings: () => Promise<void>,
-	) {
-		const siteManager = new DigitalGardenSiteManager(metadataCache, settings);
-		await siteManager.updateEnv();
-		await saveSettings();
 	}
 }
