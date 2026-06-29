@@ -184,8 +184,8 @@ h4 {
 	margin-bottom: 16px;
 }
 
-.bp-settings-section h3 {
-	margin-top: 0 !important;
+.bp-settings .bp-settings-section h3 {
+	margin-top: 0;
 	margin-bottom: 12px;
 	padding-bottom: 8px;
 	border-bottom: 1px solid var(--background-modifier-border);

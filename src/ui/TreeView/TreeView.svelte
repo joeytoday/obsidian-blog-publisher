@@ -7,9 +7,7 @@
 	export let enableShowDiff: boolean = false;
 	export let showDiff: (path: string) => void;
 
-	const treeMap: Record<string, TreeNode> = {
-		/* child label: parent node */
-	};
+	const treeMap: Record<string, TreeNode> = {/* child label: parent node */};
 	function initTreeMap(tree: TreeNode) {
 		if (tree.children) {
 			for (const child of tree.children) {
