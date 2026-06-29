@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Node from "./TreeNode.svelte";
-	import TreeNode from "src/models/TreeNode";
+	import TreeNode from "../../models/TreeNode";
 
 	export let tree: TreeNode;
 	export let readOnly: boolean = false;

@@ -5,8 +5,6 @@ export const CODE_FENCE_REGEX = /`(.*?)`/g;
 
 export const CODEBLOCK_REGEX = /```.*?[\r\n][\s\S]+?```/g;
 
-export const EXCALIDRAW_REGEX = /:\[\[(\d*?,\d*?)\],.*?\]\]/g;
-
 export const TRANSCLUDED_SVG_REGEX =
 	/!\[\[(.*?)(\.(svg))\|(.*?)\]\]|!\[\[(.*?)(\.(svg))\]\]/g;
 

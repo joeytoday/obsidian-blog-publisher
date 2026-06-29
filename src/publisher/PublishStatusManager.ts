@@ -4,9 +4,9 @@ import {
 	generateBlobHash,
 	getRewriteRules,
 	getGardenPathForNote,
+	PathRewriteRules,
 } from "../utils/utils";
 import { CompiledPublishFile } from "../publishFile/PublishFile";
-import { PathRewriteRules } from "../repositoryConnection/DigitalGardenSiteManager";
 
 /**
  *  Manages the publishing status of notes and images for a digital garden.
@@ -72,8 +72,7 @@ export default class PublishStatusManager implements IPublishStatusManager {
 			throw new Error("Could not get content tree from base garden");
 		}
 
-		const remoteNoteHashes =
-			await this.siteManager.getNoteHashes(contentTree);
+		const remoteNoteHashes = await this.siteManager.getNoteHashes(contentTree);
 
 		const remoteImageHashes =
 			await this.siteManager.getImageHashes(contentTree);
@@ -101,10 +100,7 @@ export default class PublishStatusManager implements IPublishStatusManager {
 				: frontmatter?.status;
 
 			// 使用重写后的路径查找远程文件
-			const rewrittenPath = getGardenPathForNote(
-				file.getPath(),
-				rewriteRules,
-			);
+			const rewrittenPath = getGardenPathForNote(file.getPath(), rewriteRules);
 			const remoteHash = remoteNoteHashes[rewrittenPath];
 			const fileFound = remoteHash !== undefined;
 

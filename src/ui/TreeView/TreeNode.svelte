@@ -10,7 +10,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from "svelte";
 
-	import TreeNode from "src/models/TreeNode";
+	import TreeNode from "../../models/TreeNode";
 	import Icon from "../Icon.svelte";
 	export let tree: TreeNode;
 	export let readOnly: boolean = false;
@@ -93,8 +93,7 @@
 						/>
 					{/if}
 
-					<span class="root-header" on:click={toggleExpansion}
-						>{tree.name}</span
+					<span class="root-header" on:click={toggleExpansion}>{tree.name}</span
 					>
 				{/if}
 			</span>

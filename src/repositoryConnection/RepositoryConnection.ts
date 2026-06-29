@@ -1,14 +1,14 @@
 import { Octokit } from "@octokit/core";
 import Logger from "js-logger";
-import { CompiledPublishFile } from "src/publishFile/PublishFile";
-import { IPublishPlatformConnection } from "src/models/IPublishPlatformConnection";
+import { CompiledPublishFile } from "../publishFile/PublishFile";
+import { IPublishPlatformConnection } from "../models/IPublishPlatformConnection";
 import {
 	getGardenPathForNote,
 	normalizeGitPath,
 	stripVaultImagePrefix,
 	shouldSkipUnchangedImage,
+	PathRewriteRules,
 } from "../utils/utils";
-import { PathRewriteRules } from "./DigitalGardenSiteManager";
 
 import {
 	GITHUB_FILE_MODE,
@@ -119,9 +119,7 @@ export class RepositoryConnection {
 			sha ??= await this.getFile(path, branch).then((file) => file?.sha);
 
 			if (!sha) {
-				logger.error(
-					`cannot find file ${path} on github, not removing`,
-				);
+				logger.error(`cannot find file ${path} on github, not removing`);
 
 				return false;
 			}
@@ -295,23 +293,17 @@ export class RepositoryConnection {
 			}
 		}
 
-		const imagesToUpload = Array.from(uniqueImages.values()).filter(
-			(asset) => {
-				if (
-					shouldSkipUnchangedImage(
-						asset.path,
-						asset.localHash,
-						remoteImageHashes,
-					)
-				) {
-					logger.debug(`Skipping unchanged image: ${asset.path}`);
+		const imagesToUpload = Array.from(uniqueImages.values()).filter((asset) => {
+			if (
+				shouldSkipUnchangedImage(asset.path, asset.localHash, remoteImageHashes)
+			) {
+				logger.debug(`Skipping unchanged image: ${asset.path}`);
 
-					return false;
-				}
+				return false;
+			}
 
-				return true;
-			},
-		);
+			return true;
+		});
 
 		const treeAssetPromises = imagesToUpload.map(async (asset) => {
 			const sha = await this.createBlob(asset.content, "base64");
@@ -377,10 +369,9 @@ export class RepositoryConnection {
 		commitMessage: string,
 		latestCommitSha: string,
 	): Promise<void> {
-		const repoDataPromise = this.octokit.request(
-			"GET /repos/{owner}/{repo}",
-			{ ...this.getBasePayload() },
-		);
+		const repoDataPromise = this.octokit.request("GET /repos/{owner}/{repo}", {
+			...this.getBasePayload(),
+		});
 
 		const newTree = await this.octokit.request(
 			"POST /repos/{owner}/{repo}/git/trees",

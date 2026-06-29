@@ -6,7 +6,6 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"postdev": "node scripts/generateGardenSettings.mjs",
-		"dev1": "parcel main.ts",
 		"build": "node esbuild.config.mjs production",
 		"test": "jest",
 		"prepare": "husky install",
@@ -29,7 +28,6 @@
 		"@typescript-eslint/eslint-plugin": "^6.7.0",
 		"@typescript-eslint/parser": "^6.7.0",
 		"builtin-modules": "^3.3.0",
-		"copyfiles": "^2.4.1",
 		"dotenv": "^16.3.1",
 		"esbuild": "^0.19.2",
 		"esbuild-svelte": "^0.8.0",
@@ -50,21 +48,17 @@
 	},
 	"dependencies": {
 		"@octokit/core": "^5.0.0",
-		"@popperjs/core": "^2.11.8",
 		"@sindresorhus/slugify": "^1.1.2",
-		"axios": "^1.5.0",
 		"crypto-js": "^4.1.1",
 		"diff": "^5.1.0",
 		"js-base64": "^3.7.5",
 		"js-logger": "^1.6.1",
-		"luxon": "^3.4.3",
-		"lz-string": "^1.5.0",
-		"obsidian-dataview": "^0.5.56"
+		"luxon": "^3.4.3"
 	},
 	"lint-staged": {
-		"*.{ts}": [
+		"*.{ts,svelte}": [
 			"prettier --write",
-			"eslint --fix ."
+			"eslint --fix"
 		]
 	}
 }

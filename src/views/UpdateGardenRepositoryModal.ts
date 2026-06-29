@@ -45,8 +45,7 @@ export class UpdateGardenRepositoryModal extends Modal {
 		this.loadingInterval = setInterval(() => {
 			dots = (dots + 1) % 4;
 
-			loadingText.textContent =
-				"Creating pull request" + ".".repeat(dots);
+			loadingText.textContent = "Creating pull request" + ".".repeat(dots);
 		}, 400);
 	}
 

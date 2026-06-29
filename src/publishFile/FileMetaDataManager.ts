@@ -2,12 +2,6 @@ import { FrontMatterCache, TFile } from "obsidian";
 import DigitalGardenSettings from "../models/settings";
 import { DateTime } from "luxon";
 
-// This should soon contain all the magic keys instead of them being hardcoded (with documentation)
-export enum FRONTMATTER_KEYS {
-	// The file should be published to the garden
-	PUBLISH = "pub-blog",
-}
-
 export class FileMetadataManager {
 	file: TFile;
 	frontmatter: FrontMatterCache;

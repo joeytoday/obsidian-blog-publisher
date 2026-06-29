@@ -92,19 +92,13 @@ export class ObsidianFrontMatterEngine {
 							for (let i = 1; i < entries.length; i++) {
 								line += `\n${indent}    ${
 									entries[i][0]
-								}: ${this.formatYamlValue(
-									entries[i][1],
-									indent + "    ",
-								)}`;
+								}: ${this.formatYamlValue(entries[i][1], indent + "    ")}`;
 							}
 
 							return line;
 						}
 
-						return `${indent}  - ${this.formatYamlValue(
-							item,
-							indent + "  ",
-						)}`;
+						return `${indent}  - ${this.formatYamlValue(item, indent + "  ")}`;
 					})
 					.join("\n")
 			);
@@ -122,10 +116,7 @@ export class ObsidianFrontMatterEngine {
 				entries
 					.map(
 						([k, v]) =>
-							`${indent}  ${k}: ${this.formatYamlValue(
-								v,
-								indent + "  ",
-							)}`,
+							`${indent}  ${k}: ${this.formatYamlValue(v, indent + "  ")}`,
 					)
 					.join("\n")
 			);
@@ -175,8 +166,7 @@ export class ObsidianFrontMatterEngine {
 
 	private getFrontMatterSnapshot(): Record<string, unknown> {
 		const cachedFrontMatter = {
-			...(this.metadataCache.getCache(this.file?.path)?.frontmatter ||
-				{}),
+			...(this.metadataCache.getCache(this.file?.path)?.frontmatter || {}),
 		};
 		delete cachedFrontMatter["position"];
 

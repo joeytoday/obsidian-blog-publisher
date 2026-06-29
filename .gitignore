@@ -5,6 +5,7 @@
 *.iml
 .idea
 
+
 # npm
 node_modules
 
@@ -28,3 +29,8 @@ yarn.lock
 
 .env
 src/dg-testVault/.obsidian/workspace.json
+
+# qwen code review cache
+.qwen/skills
+.qwen/tmp/
+.qwen/worktrees/

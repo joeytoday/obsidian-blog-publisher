@@ -81,8 +81,7 @@ export class PublicationCenter {
 
 	private showDiff = async (notePath: string) => {
 		try {
-			const remoteContent =
-				await this.siteManager.getNoteContent(notePath);
+			const remoteContent = await this.siteManager.getNoteContent(notePath);
 			const localFile = this.vault.getAbstractFileByPath(notePath);
 
 			const localPublishFile = new PublishFile({
@@ -95,9 +94,7 @@ export class PublicationCenter {
 
 			if (localFile instanceof TFile) {
 				const [localContent, _] =
-					await this.publisher.compiler.generateMarkdown(
-						localPublishFile,
-					);
+					await this.publisher.compiler.generateMarkdown(localPublishFile);
 
 				const diff = Diff.diffLines(remoteContent, localContent);
 				let diffView: DiffView | undefined;

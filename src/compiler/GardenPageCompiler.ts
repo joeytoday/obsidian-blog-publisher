@@ -7,8 +7,6 @@ import {
 	getLinkpath,
 } from "obsidian";
 import DigitalGardenSettings from "../models/settings";
-import { PathRewriteRule } from "../repositoryConnection/DigitalGardenSiteManager";
-import Publisher from "../publisher/Publisher";
 import {
 	fixSvgForXmlSerializer,
 	generateBlobHashFromBase64,
@@ -16,6 +14,7 @@ import {
 	getGardenPathForNote,
 	getRewriteRules,
 	sanitizePermalink,
+	PathRewriteRule,
 } from "../utils/utils";
 import slugify from "@sindresorhus/slugify";
 import { fixMarkdownHeaderSyntax } from "../utils/markdown";
@@ -49,6 +48,11 @@ export interface Assets {
 
 export type TCompiledFile = [string, Assets];
 
+type GetFilesMarkedForPublishing = () => Promise<{
+	notes: PublishFile[];
+	images: string[];
+}>;
+
 export type TCompilerStep = (
 	publishFile: PublishFile,
 ) =>
@@ -59,7 +63,7 @@ export class GardenPageCompiler {
 	private readonly vault: Vault;
 	private readonly settings: DigitalGardenSettings;
 	private metadataCache: MetadataCache;
-	private readonly getFilesMarkedForPublishing: Publisher["getFilesMarkedForPublishing"];
+	private readonly getFilesMarkedForPublishing: GetFilesMarkedForPublishing;
 
 	private rewriteRules: PathRewriteRule[];
 
@@ -67,7 +71,7 @@ export class GardenPageCompiler {
 		vault: Vault,
 		settings: DigitalGardenSettings,
 		metadataCache: MetadataCache,
-		getFilesMarkedForPublishing: Publisher["getFilesMarkedForPublishing"],
+		getFilesMarkedForPublishing: GetFilesMarkedForPublishing,
 	) {
 		this.vault = vault;
 		this.settings = settings;
@@ -85,8 +89,7 @@ export class GardenPageCompiler {
 		}
 
 		return (
-			this.metadataCache.getFirstLinkpathDest(linkPath, sourcePath) ??
-			null
+			this.metadataCache.getFirstLinkpathDest(linkPath, sourcePath) ?? null
 		);
 	};
 
@@ -106,14 +109,11 @@ export class GardenPageCompiler {
 	runCompilerSteps =
 		(file: PublishFile, compilerSteps: TCompilerStep[]) =>
 		async (text: string): Promise<string> => {
-			return await compilerSteps.reduce(
-				async (previousStep, compilerStep) => {
-					const previousStepText = await previousStep;
+			return await compilerSteps.reduce(async (previousStep, compilerStep) => {
+				const previousStepText = await previousStep;
 
-					return compilerStep(file)(previousStepText);
-				},
-				Promise.resolve(text),
-			);
+				return compilerStep(file)(previousStepText);
+			}, Promise.resolve(text));
 		};
 
 	async generateMarkdown(file: PublishFile): Promise<TCompiledFile> {
@@ -134,8 +134,7 @@ export class GardenPageCompiler {
 			COMPILE_STEPS,
 		)(vaultFileText);
 
-		const [text, images] =
-			await this.convertEmbeddedAssets(file)(compiledText);
+		const [text, images] = await this.convertEmbeddedAssets(file)(compiledText);
 
 		return [text, { images }];
 	}
@@ -199,8 +198,7 @@ export class GardenPageCompiler {
 						linkMatch.lastIndexOf("]") - 1,
 					);
 
-					let [linkedFileName, linkDisplayName] =
-						textInsideBrackets.split("|");
+					let [linkedFileName, linkDisplayName] = textInsideBrackets.split("|");
 
 					if (linkedFileName.endsWith("\\")) {
 						linkedFileName = linkedFileName.substring(
@@ -218,8 +216,7 @@ export class GardenPageCompiler {
 						linkedFileName = headerSplit[0];
 
 						//currently no support for linking to nested heading with multiple #s
-						headerPath =
-							headerSplit.length > 1 ? `#${headerSplit[1]}` : "";
+						headerPath = headerSplit.length > 1 ? `#${headerSplit[1]}` : "";
 					}
 					const fullLinkedFilePath = getLinkpath(linkedFileName);
 
@@ -296,8 +293,7 @@ export class GardenPageCompiler {
 						.split("|");
 
 					// Check if it's a YouTube URL embed
-					const youtubeId =
-						this.extractYouTubeId(transclusionFileName);
+					const youtubeId = this.extractYouTubeId(transclusionFileName);
 
 					if (youtubeId) {
 						const youtubeEmbed = `<div class="youtube-embed"><iframe src="https://www.youtube.com/embed/${youtubeId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
@@ -309,8 +305,7 @@ export class GardenPageCompiler {
 						continue;
 					}
 
-					const transclusionFilePath =
-						getLinkpath(transclusionFileName);
+					const transclusionFilePath = getLinkpath(transclusionFileName);
 
 					if (transclusionFilePath === "") {
 						continue;
@@ -344,13 +339,11 @@ export class GardenPageCompiler {
 
 						if (transclusionFileName.includes("#^")) {
 							// Transclude Block
-							const refBlock =
-								transclusionFileName.split("#^")[1];
+							const refBlock = transclusionFileName.split("#^")[1];
 
 							sectionID = `#${slugify(refBlock)}`;
 
-							const blockInFile =
-								publishLinkedFile.getBlock(refBlock);
+							const blockInFile = publishLinkedFile.getBlock(refBlock);
 
 							if (blockInFile) {
 								fileText = fileText
@@ -364,42 +357,32 @@ export class GardenPageCompiler {
 							}
 						} else if (transclusionFileName.includes("#")) {
 							// transcluding header only
-							const refHeader =
-								transclusionFileName.split("#")[1];
+							const refHeader = transclusionFileName.split("#")[1];
 
 							// This is to mitigate the issue where the header matching doesn't work properly with headers with special characters (e.g. :)
 							// Obsidian's autocomplete for transclusion omits such charcters which leads to full page transclusion instead of just the heading
 							const headerSlug = slugify(refHeader);
 
 							const headerInFile = metadata?.headings?.find(
-								(header) =>
-									slugify(header.heading) === headerSlug,
+								(header) => slugify(header.heading) === headerSlug,
 							);
 
 							sectionID = `#${slugify(refHeader)}`;
 
 							if (headerInFile && metadata?.headings) {
-								const headerPosition =
-									metadata.headings.indexOf(headerInFile);
+								const headerPosition = metadata.headings.indexOf(headerInFile);
 
 								// Embed should copy the content proparly under the given block
 								const cutTo = metadata.headings
 									.slice(headerPosition + 1)
-									.find(
-										(header) =>
-											header.level <= headerInFile.level,
-									);
+									.find((header) => header.level <= headerInFile.level);
 
 								if (cutTo) {
-									const cutToLine =
-										cutTo?.position?.start?.line;
+									const cutToLine = cutTo?.position?.start?.line;
 
 									fileText = fileText
 										.split("\n")
-										.slice(
-											headerInFile.position.start.line,
-											cutToLine,
-										)
+										.slice(headerInFile.position.start.line, cutToLine)
 										.join("\n");
 								} else {
 									fileText = fileText
@@ -425,23 +408,18 @@ export class GardenPageCompiler {
 							: "";
 						let embedded_link = "";
 
-						const publishedFilesContainsLinkedFile =
-							publishedFiles.find(
-								(f) => f.getPath() == linkedFile.path,
-							);
+						const publishedFilesContainsLinkedFile = publishedFiles.find(
+							(f) => f.getPath() == linkedFile.path,
+						);
 
 						if (publishedFilesContainsLinkedFile) {
 							const permalink =
-								metadata?.frontmatter &&
-								metadata.frontmatter["dg-permalink"];
+								metadata?.frontmatter && metadata.frontmatter["dg-permalink"];
 
 							const gardenPath = permalink
 								? sanitizePermalink(permalink)
 								: `/${generateUrlPath(
-										getGardenPathForNote(
-											linkedFile.path,
-											this.rewriteRules,
-										),
+										getGardenPathForNote(linkedFile.path, this.rewriteRules),
 										true,
 								  )}`;
 							embedded_link = `<a class="markdown-embed-link" href="${gardenPath}${sectionID}" aria-label="Open link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a>`;
@@ -453,9 +431,9 @@ export class GardenPageCompiler {
 							"\n\n</div></div>\n";
 
 						if (fileText.match(transcludedRegex)) {
-							fileText = await this.createTranscludedText(
-								currentDepth + 1,
-							)(publishLinkedFile)(fileText);
+							fileText = await this.createTranscludedText(currentDepth + 1)(
+								publishLinkedFile,
+							)(fileText);
 						}
 
 						//This should be recursive up to a certain depth
@@ -586,17 +564,11 @@ export class GardenPageCompiler {
 					const imageMatch = transcludedImageMatches[i];
 
 					const [imageName, _] = imageMatch
-						.substring(
-							imageMatch.indexOf("[") + 2,
-							imageMatch.indexOf("]"),
-						)
+						.substring(imageMatch.indexOf("[") + 2, imageMatch.indexOf("]"))
 						.split("|");
 					const imagePath = getLinkpath(imageName);
 
-					const linkedFile = this.resolveLinkedFile(
-						imagePath,
-						file.getPath(),
-					);
+					const linkedFile = this.resolveLinkedFile(imagePath, file.getPath());
 
 					if (!linkedFile) {
 						continue;
@@ -610,8 +582,7 @@ export class GardenPageCompiler {
 		}
 
 		//![](image.png) or ![](file.pdf)
-		const imageRegex =
-			/!\[(.*?)\]\((.*?)(\.(png|jpg|jpeg|gif|webp|pdf))\)/g;
+		const imageRegex = /!\[(.*?)\]\((.*?)(\.(png|jpg|jpeg|gif|webp|pdf))\)/g;
 		const imageMatches = text.match(imageRegex);
 
 		if (imageMatches) {
@@ -660,10 +631,7 @@ export class GardenPageCompiler {
 
 				const imagePath = this.extractWikilinkTarget(match[0]);
 
-				const linkedFile = this.resolveLinkedFile(
-					imagePath,
-					file.getPath(),
-				);
+				const linkedFile = this.resolveLinkedFile(imagePath, file.getPath());
 
 				if (!linkedFile) {
 					continue;
@@ -700,29 +668,23 @@ export class GardenPageCompiler {
 						//Alt 2: [image.png|meta1 meta2|100]
 						//Alt 3: [image.png|meta1 meta2]
 						const [imageName, ...metaDataAndSize] = imageMatch
-							.substring(
-								imageMatch.indexOf("[") + 2,
-								imageMatch.indexOf("]"),
-							)
+							.substring(imageMatch.indexOf("[") + 2, imageMatch.indexOf("]"))
 							.split("|");
 
-						const lastValue =
-							metaDataAndSize[metaDataAndSize.length - 1];
+						const lastValue = metaDataAndSize[metaDataAndSize.length - 1];
 
 						const hasSeveralValues = metaDataAndSize.length > 0;
 
 						const lastValueIsSize =
 							hasSeveralValues && !isNaN(parseInt(lastValue));
 
-						const lastValueIsMetaData =
-							!lastValueIsSize && hasSeveralValues;
+						const lastValueIsMetaData = !lastValueIsSize && hasSeveralValues;
 
 						const size = lastValueIsSize ? lastValue : null;
 
 						let metaData = "";
 
-						const metaDataIsMiddleValues =
-							metaDataAndSize.length > 1;
+						const metaDataIsMiddleValues = metaDataAndSize.length > 1;
 
 						//Alt 2: [image.png|meta1 meta2|100]
 						if (metaDataIsMiddleValues) {
@@ -738,10 +700,7 @@ export class GardenPageCompiler {
 
 						const imagePath = getLinkpath(imageName);
 
-						const linkedFile = this.resolveLinkedFile(
-							imagePath,
-							filePath,
-						);
+						const linkedFile = this.resolveLinkedFile(imagePath, filePath);
 
 						if (!linkedFile) {
 							continue;
@@ -762,9 +721,7 @@ export class GardenPageCompiler {
 							name = imageName;
 						}
 
-						const imageMarkdown = `![${name}](${encodeURI(
-							cmsImgPath,
-						)})`;
+						const imageMarkdown = `![${name}](${encodeURI(cmsImgPath)})`;
 
 						assets.push({
 							path: cmsImgPath,
@@ -772,10 +729,7 @@ export class GardenPageCompiler {
 							localHash: generateBlobHashFromBase64(imageBase64),
 						});
 
-						imageText = imageText.replace(
-							imageMatch,
-							imageMarkdown,
-						);
+						imageText = imageText.replace(imageMatch, imageMarkdown);
 					} catch (e) {
 						continue;
 					}
@@ -800,17 +754,13 @@ export class GardenPageCompiler {
 					if (youtubeId) {
 						const youtubeEmbed = `<div class="youtube-embed"><iframe src="https://www.youtube.com/embed/${youtubeId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
 
-						imageText = imageText.replace(
-							youtubeMatch,
-							youtubeEmbed,
-						);
+						imageText = imageText.replace(youtubeMatch, youtubeEmbed);
 					}
 				}
 			}
 
 			//![](image.png)
-			const imageRegex =
-				/!\[(.*?)\]\((.*?)(\.(png|jpg|jpeg|gif|webp))\)/g;
+			const imageRegex = /!\[(.*?)\]\((.*?)(\.(png|jpg|jpeg|gif|webp))\)/g;
 			const imageMatches = text.match(imageRegex);
 
 			if (imageMatches) {
@@ -821,18 +771,12 @@ export class GardenPageCompiler {
 						const nameStart = imageMatch.indexOf("[") + 1;
 						const nameEnd = imageMatch.indexOf("]");
 
-						const imageName = imageMatch.substring(
-							nameStart,
-							nameEnd,
-						);
+						const imageName = imageMatch.substring(nameStart, nameEnd);
 
 						const pathStart = imageMatch.lastIndexOf("(") + 1;
 						const pathEnd = imageMatch.lastIndexOf(")");
 
-						const imagePath = imageMatch.substring(
-							pathStart,
-							pathEnd,
-						);
+						const imagePath = imageMatch.substring(pathStart, pathEnd);
 
 						if (imagePath.startsWith("http")) {
 							continue;
@@ -852,9 +796,7 @@ export class GardenPageCompiler {
 						const imageBase64 = arrayBufferToBase64(image);
 						const cmsImgPath = `${VAULT_IMAGE_PATH_PREFIX}${linkedFile.path}`;
 
-						const imageMarkdown = `![${imageName}](${encodeURI(
-							cmsImgPath,
-						)})`;
+						const imageMarkdown = `![${imageName}](${encodeURI(cmsImgPath)})`;
 
 						assets.push({
 							path: cmsImgPath,
@@ -862,10 +804,7 @@ export class GardenPageCompiler {
 							localHash: generateBlobHashFromBase64(imageBase64),
 						});
 
-						imageText = imageText.replace(
-							imageMatch,
-							imageMarkdown,
-						);
+						imageText = imageText.replace(imageMatch, imageMarkdown);
 					} catch (e) {
 						Logger.warn("Error processing image link:", e);
 						continue;
@@ -970,40 +909,29 @@ export class GardenPageCompiler {
 				for (const pdfMatch of transcludedPdfMatches) {
 					try {
 						const [pdfNameFromFile, ...metadataParts] = pdfMatch
-							.substring(
-								pdfMatch.indexOf("[") + 2,
-								pdfMatch.indexOf("]"),
-							)
+							.substring(pdfMatch.indexOf("[") + 2, pdfMatch.indexOf("]"))
 							.split("|");
 
-						const altText =
-							metadataParts.join("|") || pdfNameFromFile;
+						const altText = metadataParts.join("|") || pdfNameFromFile;
 						const pdfPath = getLinkpath(pdfNameFromFile);
 
 						if (pdfPath === "") {
 							imageText = imageText.replace(
 								pdfMatch,
-								buildWikilinkFallback(
-									pdfNameFromFile,
-									metadataParts,
-								),
+								buildWikilinkFallback(pdfNameFromFile, metadataParts),
 							);
 							continue;
 						}
 
-						const linkedFile =
-							this.metadataCache.getFirstLinkpathDest(
-								pdfPath,
-								filePath,
-							) as TFile;
+						const linkedFile = this.metadataCache.getFirstLinkpathDest(
+							pdfPath,
+							filePath,
+						) as TFile;
 
 						if (!linkedFile || linkedFile.extension !== "pdf") {
 							imageText = imageText.replace(
 								pdfMatch,
-								buildWikilinkFallback(
-									pdfNameFromFile,
-									metadataParts,
-								),
+								buildWikilinkFallback(pdfNameFromFile, metadataParts),
 							);
 							continue;
 						}
@@ -1024,8 +952,7 @@ export class GardenPageCompiler {
 							continue;
 						}
 
-						const pdfBinary =
-							await this.vault.readBinary(linkedFile);
+						const pdfBinary = await this.vault.readBinary(linkedFile);
 						const pdfBase64 = arrayBufferToBase64(pdfBinary);
 						const cmsPdfPath = `${VAULT_IMAGE_PATH_PREFIX}${linkedFile.path}`;
 
@@ -1040,24 +967,15 @@ export class GardenPageCompiler {
 							generatePdfIframe(cmsPdfPath, altText),
 						);
 					} catch (e) {
-						Logger.warn(
-							"Error processing transcluded PDF link:",
-							e,
-						);
+						Logger.warn("Error processing transcluded PDF link:", e);
 
 						const [pdfNameFromFile, ...metadataParts] = pdfMatch
-							.substring(
-								pdfMatch.indexOf("[") + 2,
-								pdfMatch.indexOf("]"),
-							)
+							.substring(pdfMatch.indexOf("[") + 2, pdfMatch.indexOf("]"))
 							.split("|");
 
 						imageText = imageText.replace(
 							pdfMatch,
-							buildWikilinkFallback(
-								pdfNameFromFile,
-								metadataParts,
-							),
+							buildWikilinkFallback(pdfNameFromFile, metadataParts),
 						);
 					}
 				}
@@ -1081,10 +999,7 @@ export class GardenPageCompiler {
 						if (pdfPath.startsWith("http")) {
 							imageText = imageText.replace(
 								pdfMatch,
-								generatePdfIframe(
-									pdfPath,
-									pdfName || "External PDF",
-								),
+								generatePdfIframe(pdfPath, pdfName || "External PDF"),
 							);
 							continue;
 						}
@@ -1094,25 +1009,20 @@ export class GardenPageCompiler {
 						if (decodedPdfPath === "") {
 							imageText = imageText.replace(
 								pdfMatch,
-								`[${pdfName || "Invalid PDF Link"}](${encodeURI(
-									pdfPath,
-								)})`,
+								`[${pdfName || "Invalid PDF Link"}](${encodeURI(pdfPath)})`,
 							);
 							continue;
 						}
 
-						const linkedFile =
-							this.metadataCache.getFirstLinkpathDest(
-								decodedPdfPath,
-								filePath,
-							) as TFile;
+						const linkedFile = this.metadataCache.getFirstLinkpathDest(
+							decodedPdfPath,
+							filePath,
+						) as TFile;
 
 						if (!linkedFile || linkedFile.extension !== "pdf") {
 							imageText = imageText.replace(
 								pdfMatch,
-								`[${pdfName || decodedPdfPath}](${encodeURI(
-									pdfPath,
-								)})`,
+								`[${pdfName || decodedPdfPath}](${encodeURI(pdfPath)})`,
 							);
 							continue;
 						}
@@ -1126,15 +1036,12 @@ export class GardenPageCompiler {
 								pdfMatch,
 								`[${
 									pdfName || linkedFile.name
-								} (PDF too large to embed)](${encodeURI(
-									pdfPath,
-								)})`,
+								} (PDF too large to embed)](${encodeURI(pdfPath)})`,
 							);
 							continue;
 						}
 
-						const pdfBinary =
-							await this.vault.readBinary(linkedFile);
+						const pdfBinary = await this.vault.readBinary(linkedFile);
 						const pdfBase64 = arrayBufferToBase64(pdfBinary);
 						const cmsPdfPath = `${VAULT_IMAGE_PATH_PREFIX}${linkedFile.path}`;
 
@@ -1146,10 +1053,7 @@ export class GardenPageCompiler {
 
 						imageText = imageText.replace(
 							pdfMatch,
-							generatePdfIframe(
-								cmsPdfPath,
-								pdfName || linkedFile.basename,
-							),
+							generatePdfIframe(cmsPdfPath, pdfName || linkedFile.basename),
 						);
 					} catch (e) {
 						Logger.warn("Error processing PDF link:", e);
@@ -1182,10 +1086,7 @@ export class GardenPageCompiler {
 		const titleVariable = "{{title}}";
 
 		if (headerName.includes(titleVariable)) {
-			headerName = headerName.replace(
-				titleVariable,
-				transcludedFile.basename,
-			);
+			headerName = headerName.replace(titleVariable, transcludedFile.basename);
 		}
 
 		return fixMarkdownHeaderSyntax(headerName);
