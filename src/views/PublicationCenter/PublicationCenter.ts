@@ -53,8 +53,6 @@ export class PublicationCenter {
 			},
 		});
 		repoLink.appendChild(this.getIcon("external-link"));
-		repoLink.style.marginLeft = "8px";
-		repoLink.style.opacity = "0.7";
 		repoLink.title = linkInfo.tooltip;
 	}
 
@@ -70,10 +68,10 @@ export class PublicationCenter {
 	}
 
 	getIcon(name: string): Node {
-		const icon = getIcon(name) ?? document.createElement("span");
+		const icon = getIcon(name) ?? activeDocument.createElement("span");
 
 		if (icon instanceof SVGSVGElement) {
-			icon.style.marginRight = "4px";
+			icon.classList.add("publication-center-icon");
 		}
 
 		return icon;
@@ -84,43 +82,45 @@ export class PublicationCenter {
 			const remoteContent = await this.siteManager.getNoteContent(notePath);
 			const localFile = this.vault.getAbstractFileByPath(notePath);
 
+			if (!(localFile instanceof TFile)) {
+				return;
+			}
+
 			const localPublishFile = new PublishFile({
-				file: localFile as TFile,
+				file: localFile,
 				vault: this.vault,
 				compiler: this.publisher.compiler,
 				metadataCache: this.publisher.metadataCache,
 				settings: this.settings,
 			});
 
-			if (localFile instanceof TFile) {
-				const [localContent, _] =
-					await this.publisher.compiler.generateMarkdown(localPublishFile);
+			const [localContent] =
+				await this.publisher.compiler.generateMarkdown(localPublishFile);
 
-				const diff = Diff.diffLines(remoteContent, localContent);
-				let diffView: DiffView | undefined;
-				const diffModal = new Modal(this.modal.app);
+			const diff = Diff.diffLines(remoteContent, localContent);
+			let diffView: DiffView | undefined;
+			const diffModal = new Modal(this.modal.app);
 
-				diffModal.titleEl
-					.createEl("span", { text: `${localFile.basename}` })
-					.prepend(this.getIcon("file-diff"));
+			diffModal.titleEl
+				.createEl("span", { text: `${localFile.basename}` })
+				.prepend(this.getIcon("file-diff"));
 
-				diffModal.onOpen = () => {
-					diffView = new DiffView({
-						target: diffModal.contentEl,
-						props: { diff: diff },
-					});
-				};
+			diffModal.onOpen = () => {
+				diffView = new DiffView({
+					target: diffModal.contentEl,
+					props: { diff: diff },
+				});
+			};
 
-				this.modal.onClose = () => {
-					if (diffView) {
-						diffView.$destroy();
-					}
-				};
+			this.modal.onClose = () => {
+				if (diffView) {
+					diffView.$destroy();
+				}
+			};
 
-				diffModal.open();
-			}
+			diffModal.open();
 		} catch (e) {
-			console.error(e);
+			console.error(e instanceof Error ? e.message : String(e));
 		}
 	};
 	open = () => {

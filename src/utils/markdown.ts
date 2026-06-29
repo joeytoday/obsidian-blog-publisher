@@ -5,7 +5,7 @@ const seperateHashesFromHeader = (
 	const matches = rawHeading.match(regex);
 
 	if (matches?.groups) {
-		const { hashes, _space, title } = matches.groups;
+		const { hashes, title } = matches.groups;
 
 		return {
 			hashes,

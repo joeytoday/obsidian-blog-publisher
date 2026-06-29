@@ -59,9 +59,13 @@ export default class BlogPublisher extends Plugin {
 		console.log("Initializing BlogPublisher plugin v" + this.appVersion);
 		await this.loadSettings();
 
-		this.settings.logLevel && Logger.setLevel(this.settings.logLevel);
+		if (this.settings.logLevel) {
+			Logger.setLevel(this.settings.logLevel);
+		}
 
-		Logger.info("Blog publisher log level set to " + Logger.getLevel().name);
+		const levelName =
+			(Logger.getLevel() as { name?: string })?.name ?? "unknown";
+		Logger.info("Blog publisher log level set to " + levelName);
 
 		this.addSettingTab(new BlogPublisherSettingTab(this.app, this));
 		await this.addCommands();
@@ -69,7 +73,7 @@ export default class BlogPublisher extends Plugin {
 		addIcon("blog-publisher-icon", publisherIcon);
 
 		this.addRibbonIcon("blog-publisher-icon", "打开发布中心", async () => {
-			this.openPublishModal();
+			void this.openPublishModal();
 		});
 	}
 
@@ -77,27 +81,29 @@ export default class BlogPublisher extends Plugin {
 
 	async loadSettings() {
 		const loaded = await this.loadData();
-		const merged = Object.assign({}, DEFAULT_SETTINGS, loaded);
+
+		if (loaded === null || typeof loaded !== "object") {
+			this.settings = { ...DEFAULT_SETTINGS };
+
+			return;
+		}
+		const loadedRecord = loaded as Record<string, unknown>;
+
+		const merged = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			loadedRecord,
+		) as BlogPublisherSettings;
 
 		// 迁移：旧配置可能有 publishBasePath，如果没有 contentBasePath 则沿用
-		if (
-			loaded &&
-			(loaded as Record<string, unknown>).publishBasePath &&
-			!loaded?.contentBasePath
-		) {
-			const path = (loaded as Record<string, unknown>)
-				.publishBasePath as string;
+		if (loadedRecord.publishBasePath && !loadedRecord.contentBasePath) {
+			const path = loadedRecord.publishBasePath as string;
 			merged.contentBasePath = path.endsWith("/") ? path : path + "/";
 		}
 
 		// 迁移：gardenBaseUrl → siteUrl
-		if (
-			loaded &&
-			(loaded as Record<string, unknown>).gardenBaseUrl &&
-			!merged.siteUrl
-		) {
-			merged.siteUrl = (loaded as Record<string, unknown>)
-				.gardenBaseUrl as string;
+		if (loadedRecord.gardenBaseUrl && !merged.siteUrl) {
+			merged.siteUrl = loadedRecord.gardenBaseUrl as string;
 		}
 
 		this.settings = merged;
@@ -135,7 +141,7 @@ export default class BlogPublisher extends Plugin {
 						};
 						this.app.metadataCache.on("changed", handler);
 
-						setTimeout(() => {
+						window.setTimeout(() => {
 							if (!resolved) {
 								resolved = true;
 								this.app.metadataCache.offref(handler);
@@ -189,7 +195,7 @@ export default class BlogPublisher extends Plugin {
 			id: "bp-open-publish-modal",
 			name: "打开发布中心",
 			callback: async () => {
-				this.openPublishModal();
+				void this.openPublishModal();
 			},
 		});
 
@@ -198,7 +204,7 @@ export default class BlogPublisher extends Plugin {
 			id: "bp-mark-note-for-publish",
 			name: "添加发布标记",
 			callback: async () => {
-				this.setPublishFlagValue(true);
+				void this.setPublishFlagValue(true);
 			},
 		});
 
@@ -207,7 +213,7 @@ export default class BlogPublisher extends Plugin {
 			id: "bp-unmark-note-for-publish",
 			name: "移除发布标记",
 			callback: async () => {
-				this.setPublishFlagValue(false);
+				void this.setPublishFlagValue(false);
 			},
 		});
 
@@ -216,7 +222,7 @@ export default class BlogPublisher extends Plugin {
 			id: "bp-mark-toggle-publish-status",
 			name: "切换发布状态",
 			callback: async () => {
-				this.togglePublishFlag();
+				void this.togglePublishFlag();
 			},
 		});
 	}
@@ -260,7 +266,7 @@ export default class BlogPublisher extends Plugin {
 			await navigator.clipboard.writeText(fullUrl);
 			new Notice(`笔记URL已复制到剪贴板`);
 		} catch (e) {
-			console.log(e);
+			console.error(e instanceof Error ? e.message : String(e));
 			new Notice("无法复制笔记URL到剪贴板，出现错误。");
 		}
 	}

@@ -110,7 +110,7 @@ export class RepositoryConnection {
 			) {
 				return response.data;
 			}
-		} catch (error) {
+		} catch {
 			throw new Error(
 				`Could not get file ${path} from repository ${this.getRepositoryName()}`,
 			);
@@ -149,7 +149,7 @@ export class RepositoryConnection {
 
 			return result;
 		} catch (error) {
-			logger.error(error);
+			logger.error(error instanceof Error ? error.message : String(error));
 
 			return false;
 		}
@@ -168,7 +168,10 @@ export class RepositoryConnection {
 
 			return release.data;
 		} catch (error) {
-			logger.error("Could not get latest release", error);
+			logger.error(
+				"Could not get latest release",
+				error instanceof Error ? error.message : String(error),
+			);
 		}
 	}
 
@@ -187,7 +190,10 @@ export class RepositoryConnection {
 
 			return latestCommit.data;
 		} catch (error) {
-			logger.error("Could not get latest commit", error);
+			logger.error(
+				"Could not get latest commit",
+				error instanceof Error ? error.message : String(error),
+			);
 		}
 	}
 
@@ -207,7 +213,7 @@ export class RepositoryConnection {
 				payload,
 			);
 		} catch (error) {
-			logger.error(error);
+			logger.error(error instanceof Error ? error.message : String(error));
 			throw error;
 		}
 	}
@@ -421,7 +427,7 @@ export class RepositoryConnection {
 				...this.getBasePayload(),
 			})
 			.catch((error) => {
-				logger.error(error);
+				logger.error(error instanceof Error ? error.message : String(error));
 
 				logger.warn(
 					`Could not get repository info for ${this.getRepositoryName()}`,
@@ -473,7 +479,10 @@ export class RepositoryConnection {
 
 			return false;
 		} catch (error) {
-			logger.error(`Failed to trigger workflow ${workflowId}:`, error);
+			logger.error(
+				`Failed to trigger workflow ${workflowId}:`,
+				error instanceof Error ? error.message : String(error),
+			);
 
 			return false;
 		}

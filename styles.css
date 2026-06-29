@@ -506,3 +506,35 @@ h4 {
 	color: var(--interactive-accent);
 	text-decoration: underline;
 }
+
+/* Publication Center */
+.publication-center-repo-link {
+	margin-left: 8px;
+	opacity: 0.7;
+}
+
+.publication-center-icon {
+	margin-right: 4px;
+}
+
+/* Path rewrite examples in settings */
+.bp-path-rewrite-textarea {
+	width: 100%;
+}
+
+.bp-path-rewrite-example {
+	margin-top: 10px;
+	margin-bottom: 15px;
+	padding: 10px;
+	background-color: var(--background-secondary);
+	border-radius: 5px;
+}
+
+.bp-path-rewrite-list {
+	margin-top: 8px;
+	margin-left: 20px;
+}
+
+.bp-path-rewrite-tip {
+	margin-top: 8px;
+}

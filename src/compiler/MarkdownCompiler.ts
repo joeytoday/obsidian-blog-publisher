@@ -257,7 +257,7 @@ export class MarkdownCompiler {
 						);
 					}
 				} catch (e) {
-					console.log(e);
+					console.log(e instanceof Error ? e.message : String(e));
 					continue;
 				}
 			}
@@ -442,7 +442,7 @@ export class MarkdownCompiler {
 						);
 					}
 				} catch (error) {
-					console.error(error);
+					console.error(error instanceof Error ? error.message : String(error));
 					continue;
 				}
 			}
@@ -509,7 +509,7 @@ export class MarkdownCompiler {
 		if (linkedSvgMatches) {
 			for (const svg of linkedSvgMatches) {
 				try {
-					const [_imageName, size] = svg
+					const [, size] = svg
 						.substring(svg.indexOf("[") + 2, svg.indexOf("]"))
 						.split("|");
 					const pathStart = svg.lastIndexOf("(") + 1;
@@ -562,7 +562,7 @@ export class MarkdownCompiler {
 				try {
 					const imageMatch = transcludedImageMatches[i];
 
-					const [imageName, _] = imageMatch
+					const [imageName] = imageMatch
 						.substring(imageMatch.indexOf("[") + 2, imageMatch.indexOf("]"))
 						.split("|");
 					const imagePath = getLinkpath(imageName);
@@ -574,7 +574,7 @@ export class MarkdownCompiler {
 					}
 
 					assets.push(linkedFile.path);
-				} catch (e) {
+				} catch {
 					continue;
 				}
 			}
@@ -729,7 +729,7 @@ export class MarkdownCompiler {
 						});
 
 						imageText = imageText.replace(imageMatch, imageMarkdown);
-					} catch (e) {
+					} catch {
 						continue;
 					}
 				}
@@ -805,7 +805,10 @@ export class MarkdownCompiler {
 
 						imageText = imageText.replace(imageMatch, imageMarkdown);
 					} catch (e) {
-						Logger.warn("Error processing image link:", e);
+						Logger.warn(
+							"Error processing image link:",
+							e instanceof Error ? e.message : String(e),
+						);
 						continue;
 					}
 				}
@@ -873,7 +876,10 @@ export class MarkdownCompiler {
 
 					imageText = imageText.replace(rawMatch, imageMarkdown);
 				} catch (e) {
-					Logger.warn("Error processing linked image:", e);
+					Logger.warn(
+						"Error processing linked image:",
+						e instanceof Error ? e.message : String(e),
+					);
 					continue;
 				}
 			}
@@ -925,7 +931,7 @@ export class MarkdownCompiler {
 						const linkedFile = this.metadataCache.getFirstLinkpathDest(
 							pdfPath,
 							filePath,
-						) as TFile;
+						);
 
 						if (!linkedFile || linkedFile.extension !== "pdf") {
 							imageText = imageText.replace(
@@ -966,7 +972,10 @@ export class MarkdownCompiler {
 							generatePdfIframe(cmsPdfPath, altText),
 						);
 					} catch (e) {
-						Logger.warn("Error processing transcluded PDF link:", e);
+						Logger.warn(
+							"Error processing transcluded PDF link:",
+							e instanceof Error ? e.message : String(e),
+						);
 
 						const [pdfNameFromFile, ...metadataParts] = pdfMatch
 							.substring(pdfMatch.indexOf("[") + 2, pdfMatch.indexOf("]"))
@@ -1016,7 +1025,7 @@ export class MarkdownCompiler {
 						const linkedFile = this.metadataCache.getFirstLinkpathDest(
 							decodedPdfPath,
 							filePath,
-						) as TFile;
+						);
 
 						if (!linkedFile || linkedFile.extension !== "pdf") {
 							imageText = imageText.replace(
@@ -1055,7 +1064,10 @@ export class MarkdownCompiler {
 							generatePdfIframe(cmsPdfPath, pdfName || linkedFile.basename),
 						);
 					} catch (e) {
-						Logger.warn("Error processing PDF link:", e);
+						Logger.warn(
+							"Error processing PDF link:",
+							e instanceof Error ? e.message : String(e),
+						);
 						const nameStart = pdfMatch.indexOf("[") + 1;
 						const nameEnd = pdfMatch.indexOf("]");
 						const pdfName = pdfMatch.substring(nameStart, nameEnd);

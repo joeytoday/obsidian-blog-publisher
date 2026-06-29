@@ -1,7 +1,6 @@
 import { Base64 } from "js-base64";
 import slugify from "@sindresorhus/slugify";
-import sha1 from "crypto-js/sha1";
-import Latin1 from "crypto-js/enc-latin1";
+import { createHash } from "crypto";
 import { DEFAULT_IMAGE_URL_PREFIX } from "../constants";
 
 const REWRITE_RULE_DELIMITER = ":";
@@ -87,15 +86,15 @@ function generateBlobHash(content: string) {
 	const header = `blob ${byteLength}\0`;
 	const gitBlob = header + content;
 
-	return sha1(gitBlob).toString();
+	return createHash("sha1").update(gitBlob, "utf8").digest("hex");
 }
 
 /**
  * Computes a Git-compatible blob hash for base64-encoded binary content.
  * Git blob hash = SHA1("blob <size>\0" + content)
  *
- * Uses Latin1 encoding to preserve raw byte values, as crypto-js defaults
- * to UTF-8 which corrupts binary data.
+ * Uses Latin1 encoding to preserve raw byte values, as binary data decoded
+ * from base64 may contain bytes outside the UTF-8 ASCII range.
  */
 function generateBlobHashFromBase64(base64Content: string) {
 	const binary = Base64.atob(base64Content);
@@ -103,9 +102,7 @@ function generateBlobHashFromBase64(base64Content: string) {
 	const header = `blob ${byteLength}\0`;
 	const gitBlob = header + binary;
 
-	const wordArray = Latin1.parse(gitBlob);
-
-	return sha1(wordArray).toString();
+	return createHash("sha1").update(gitBlob, "latin1").digest("hex");
 }
 
 function getRewriteRules(pathRewriteRules: string): PathRewriteRules {

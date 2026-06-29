@@ -27,7 +27,7 @@ export default class SettingView {
 	}
 
 	getIcon(name: string): Node {
-		return getIcon(name) ?? document.createElement("span");
+		return getIcon(name) ?? activeDocument.createElement("span");
 	}
 
 	async initialize() {
@@ -76,18 +76,14 @@ export default class SettingView {
 						await this.saveSettings();
 					});
 				text.inputEl.rows = 5;
-				text.inputEl.style.width = "100%";
+				text.inputEl.addClass("bp-path-rewrite-textarea");
 			});
 
 		// 路径改写示例说明
 		const exampleContainer = this.settingsRootElement.createEl("div", {
 			cls: "setting-item-description",
 		});
-		exampleContainer.style.marginTop = "10px";
-		exampleContainer.style.marginBottom = "15px";
-		exampleContainer.style.padding = "10px";
-		exampleContainer.style.backgroundColor = "var(--background-secondary)";
-		exampleContainer.style.borderRadius = "5px";
+		exampleContainer.addClass("bp-path-rewrite-example");
 
 		exampleContainer.createEl("div", {
 			text: "📋 路径改写示例（基于当前规则）：",
@@ -97,8 +93,7 @@ export default class SettingView {
 		const exampleList = exampleContainer.createEl("ul", {
 			cls: "setting-item-description",
 		});
-		exampleList.style.marginTop = "8px";
-		exampleList.style.marginLeft = "20px";
+		exampleList.addClass("bp-path-rewrite-list");
 
 		const examples = [
 			{
@@ -124,8 +119,8 @@ export default class SettingView {
 
 		exampleContainer.createEl("div", {
 			text: "💡 提示：使用冒号分隔原始路径和目标路径，留空目标路径表示映射到根目录",
-			cls: "setting-item-description",
-		}).style.marginTop = "8px";
+			cls: "setting-item-description bp-path-rewrite-tip",
+		});
 
 		// 调试日志
 		this.settingsRootElement

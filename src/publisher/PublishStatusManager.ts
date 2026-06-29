@@ -88,7 +88,7 @@ export default class PublishStatusManager implements IPublishStatusManager {
 		// 只检测 pub-blog=true 的文件
 		for (const file of marked.notes) {
 			const compiledFile = await file.compile();
-			const [content, _] = compiledFile.getCompiledFile();
+			const [content] = compiledFile.getCompiledFile();
 			const localHash = generateBlobHash(content);
 
 			// 获取文件的 frontmatter 信息

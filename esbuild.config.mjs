@@ -1,12 +1,29 @@
 import esbuild from "esbuild";
 import process from "process";
-import builtins from 'builtin-modules'
+import { builtinModules } from "node:module";
+import { readFileSync } from "node:fs";
 import esbuildSvelte from "esbuild-svelte";
 import sveltePreprocess from "svelte-preprocess";
-import dotenv from 'dotenv';
 
-// Load environment variables from .env file
-dotenv.config();
+const builtins = [...builtinModules];
+
+// Minimal .env loader — replaces dotenv dependency
+try {
+	const envContent = readFileSync('.env', 'utf8');
+	for (const line of envContent.split('\n')) {
+		const trimmed = line.trim();
+		if (!trimmed || trimmed.startsWith('#')) continue;
+		const eqIndex = trimmed.indexOf('=');
+		if (eqIndex === -1) continue;
+		const key = trimmed.slice(0, eqIndex).trim();
+		const value = trimmed.slice(eqIndex + 1).trim().replace(/^["']|["']$/g, '');
+		if (!process.env[key]) {
+			process.env[key] = value;
+		}
+	}
+} catch {
+	// .env file not found — use environment variables as-is
+}
 
 const banner =
 `/*

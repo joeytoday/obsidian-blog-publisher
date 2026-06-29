@@ -30,7 +30,7 @@ export class PublishStatusBar {
 	finish(displayDurationMillisec: number) {
 		this.status.innerText = `✅ Published files: ${this.counter}/${this.numberOfNotesToPublish}`;
 
-		setTimeout(() => {
+		window.setTimeout(() => {
 			this.statusBarItem.remove();
 		}, displayDurationMillisec);
 	}

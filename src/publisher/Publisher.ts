@@ -80,7 +80,7 @@ export default class Publisher {
 					images.forEach((i) => imagesToPublish.add(i));
 				}
 			} catch (e) {
-				Logger.error(e);
+				Logger.error(e instanceof Error ? e.message : String(e));
 			}
 		}
 

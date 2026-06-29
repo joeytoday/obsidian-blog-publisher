@@ -47,7 +47,7 @@ export class GithubSettings {
 	};
 
 	checkConnectionAndSaveSettings = async () => {
-		this.settings.saveSettings();
+		await this.settings.saveSettings();
 		this.debouncedUpdateConnectionStatus();
 	};
 
@@ -224,7 +224,7 @@ export class GithubSettings {
 	}
 
 	private initializeGitHubTokenSetting() {
-		const desc = document.createDocumentFragment();
+		const desc = activeDocument.createDocumentFragment();
 
 		desc.createEl("span", undefined, (span) => {
 			span.innerText = "具有 contents 权限的 GitHub 令牌。查看如何生成：";
