@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.9 (2026-06-29)
+
+- README 翻译为英文，符合 Obsidian 插件目录要求
+- CSS 移除 !important，改用更高优先级选择器
+- 依赖源改为官方 npm registry，确保可复现构建
+- bun.lockb 迁移为 bun.lock 文本格式
+
 ## 1.2.8 (2026-06-29)
 
 - 插件改为通用博客发布工具，可发布到任意 GitHub 仓库

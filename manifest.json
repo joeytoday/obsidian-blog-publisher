@@ -1,7 +1,7 @@
 {
 	"id": "blog-publisher",
 	"name": "Blog Publisher",
-	"version": "1.2.8",
+	"version": "1.2.9",
 	"minAppVersion": "1.10.0",
 	"description": "Publish my posts to my site.",
 	"author": "joeytoday",

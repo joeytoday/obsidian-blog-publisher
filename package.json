@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-blog-publisher",
-	"version": "1.2.8",
+	"version": "1.2.9",
 	"description": "Publish Obsidian notes to any GitHub-hosted blog",
 	"main": "main.js",
 	"scripts": {
