@@ -1,20 +1,20 @@
-import DigitalGardenSiteManager from "../repositoryConnection/DigitalGardenSiteManager";
+import SiteManager from "../repositoryConnection/SiteManager";
 import Publisher from "./Publisher";
 import {
 	generateBlobHash,
 	getRewriteRules,
-	getGardenPathForNote,
+	getRewrittenPath,
 	PathRewriteRules,
 } from "../utils/utils";
 import { CompiledPublishFile } from "../publishFile/PublishFile";
 
 /**
- *  Manages the publishing status of notes and images for a digital garden.
+ *  Manages the publishing status of notes and images for a blog publisher.
  */
 export default class PublishStatusManager implements IPublishStatusManager {
-	siteManager: DigitalGardenSiteManager;
+	siteManager: SiteManager;
 	publisher: Publisher;
-	constructor(siteManager: DigitalGardenSiteManager, publisher: Publisher) {
+	constructor(siteManager: SiteManager, publisher: Publisher) {
 		this.siteManager = siteManager;
 		this.publisher = publisher;
 	}
@@ -32,7 +32,7 @@ export default class PublishStatusManager implements IPublishStatusManager {
 
 		// 应用路径重写规则，将本地路径转换为发布后的路径
 		const rewrittenMarked = rewriteRules
-			? marked.map((path) => getGardenPathForNote(path, rewriteRules))
+			? marked.map((path) => getRewrittenPath(path, rewriteRules))
 			: marked;
 
 		// 检查路径是否被标记为发布
@@ -65,11 +65,11 @@ export default class PublishStatusManager implements IPublishStatusManager {
 		const changedNotes: Array<CompiledPublishFile> = [];
 
 		const contentTree = await (
-			await this.siteManager.getUserGardenConnection()
+			await this.siteManager.getUserConnection()
 		).getContent("HEAD");
 
 		if (!contentTree) {
-			throw new Error("Could not get content tree from base garden");
+			throw new Error("Could not get content tree from repository");
 		}
 
 		const remoteNoteHashes = await this.siteManager.getNoteHashes(contentTree);
@@ -100,7 +100,7 @@ export default class PublishStatusManager implements IPublishStatusManager {
 				: frontmatter?.status;
 
 			// 使用重写后的路径查找远程文件
-			const rewrittenPath = getGardenPathForNote(file.getPath(), rewriteRules);
+			const rewrittenPath = getRewrittenPath(file.getPath(), rewriteRules);
 			const remoteHash = remoteNoteHashes[rewrittenPath];
 			const fileFound = remoteHash !== undefined;
 

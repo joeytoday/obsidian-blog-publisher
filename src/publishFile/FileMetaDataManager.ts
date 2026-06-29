@@ -1,16 +1,16 @@
 import { FrontMatterCache, TFile } from "obsidian";
-import DigitalGardenSettings from "../models/settings";
+import BlogPublisherSettings from "../models/settings";
 import { DateTime } from "luxon";
 
 export class FileMetadataManager {
 	file: TFile;
 	frontmatter: FrontMatterCache;
-	settings: DigitalGardenSettings;
+	settings: BlogPublisherSettings;
 
 	constructor(
 		file: TFile,
 		frontmatter: FrontMatterCache,
-		settings: DigitalGardenSettings,
+		settings: BlogPublisherSettings,
 	) {
 		this.file = file;
 		this.frontmatter = frontmatter;

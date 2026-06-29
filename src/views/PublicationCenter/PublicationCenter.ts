@@ -1,7 +1,7 @@
 import { type App, Modal, getIcon, Vault, TFile } from "obsidian";
-import DigitalGardenSettings from "../../models/settings";
+import BlogPublisherSettings from "../../models/settings";
 import { PublishFile } from "../../publishFile/PublishFile";
-import DigitalGardenSiteManager from "../../repositoryConnection/DigitalGardenSiteManager";
+import SiteManager from "../../repositoryConnection/SiteManager";
 import PublishStatusManager from "../../publisher/PublishStatusManager";
 import Publisher from "../../publisher/Publisher";
 import PublicationCenterSvelte from "./PublicationCenter.svelte";
@@ -10,10 +10,10 @@ import * as Diff from "diff";
 
 export class PublicationCenter {
 	modal: Modal;
-	settings: DigitalGardenSettings;
+	settings: BlogPublisherSettings;
 	publishStatusManager: PublishStatusManager;
 	publisher: Publisher;
-	siteManager: DigitalGardenSiteManager;
+	siteManager: SiteManager;
 	vault: Vault;
 
 	publicationCenterUi!: PublicationCenterSvelte;
@@ -22,8 +22,8 @@ export class PublicationCenter {
 		app: App,
 		publishStatusManager: PublishStatusManager,
 		publisher: Publisher,
-		siteManager: DigitalGardenSiteManager,
-		settings: DigitalGardenSettings,
+		siteManager: SiteManager,
+		settings: BlogPublisherSettings,
 	) {
 		this.modal = new Modal(app);
 		this.settings = settings;

@@ -2,7 +2,7 @@ import { ILogLevel } from "js-logger";
 import { PublishPlatform } from "./PublishPlatform";
 
 /** Saved to data.json, changing requires a migration */
-export default interface DigitalGardenSettings {
+export default interface BlogPublisherSettings {
 	githubToken: string;
 	githubRepo: string;
 	githubUserName: string;
@@ -13,7 +13,19 @@ export default interface DigitalGardenSettings {
 	 */
 	contentBasePath: string;
 
-	gardenBaseUrl: string;
+	/**
+	 * The base path where images will be uploaded in the repository.
+	 * Default is "src/site/img/user/".
+	 */
+	imagePath: string;
+
+	/**
+	 * The URL prefix used in published markdown for image references.
+	 * Default is "/img/user/".
+	 */
+	imageUrlPrefix: string;
+
+	siteUrl: string;
 	prHistory: string[];
 
 	siteName: string;
@@ -21,6 +33,12 @@ export default interface DigitalGardenSettings {
 	pathRewriteRules: string;
 
 	publishPlatform: PublishPlatform;
+
+	/**
+	 * GitHub Actions workflow filename (e.g. "deploy.yml") to trigger after publishing.
+	 * Empty string means no workflow trigger.
+	 */
+	workflowFileName: string;
 
 	ENABLE_DEVELOPER_TOOLS?: boolean;
 	devPluginPath?: string;

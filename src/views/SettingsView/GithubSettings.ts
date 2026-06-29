@@ -1,7 +1,11 @@
 import { Setting, debounce, getIcon } from "obsidian";
 import SettingView from "./SettingView";
 import { Octokit } from "@octokit/core";
-import { DEFAULT_NOTE_PATH_BASE } from "../../constants";
+import {
+	DEFAULT_NOTE_PATH_BASE,
+	DEFAULT_IMAGE_PATH,
+	DEFAULT_IMAGE_URL_PREFIX,
+} from "../../constants";
 
 export class GithubSettings {
 	settings: SettingView;
@@ -25,6 +29,9 @@ export class GithubSettings {
 		this.initializeGitHubUserNameSetting();
 		this.initializeGitHubTokenSetting();
 		this.initializeContentBasePathSetting();
+		this.initializeImagePathSetting();
+		this.initializeImageUrlPrefixSetting();
+		this.initializeWorkflowSetting();
 	}
 
 	initializeHeader = () => {
@@ -224,7 +231,7 @@ export class GithubSettings {
 
 			span.createEl("a", undefined, (link) => {
 				link.href =
-					"https://dg-docs.ole.dev/advanced/fine-grained-access-token/";
+					"https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens";
 				link.innerText = "点击这里";
 			});
 		});
@@ -256,6 +263,56 @@ export class GithubSettings {
 					.onChange(async (value) => {
 						const normalizedPath = value.endsWith("/") ? value : value + "/";
 						this.settings.settings.contentBasePath = normalizedPath;
+						await this.checkConnectionAndSaveSettings();
+					}),
+			);
+	}
+
+	private initializeImagePathSetting() {
+		new Setting(this.settingsRootElement)
+			.setName("图片上传路径")
+			.setDesc(`图片在仓库中的存储路径，默认为：${DEFAULT_IMAGE_PATH}`)
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_IMAGE_PATH)
+					.setValue(this.settings.settings.imagePath)
+					.onChange(async (value) => {
+						const normalizedPath = value.endsWith("/") ? value : value + "/";
+						this.settings.settings.imagePath = normalizedPath;
+						await this.checkConnectionAndSaveSettings();
+					}),
+			);
+	}
+
+	private initializeImageUrlPrefixSetting() {
+		new Setting(this.settingsRootElement)
+			.setName("图片 URL 前缀")
+			.setDesc(
+				`发布后 Markdown 中图片链接的前缀，默认为：${DEFAULT_IMAGE_URL_PREFIX}`,
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_IMAGE_URL_PREFIX)
+					.setValue(this.settings.settings.imageUrlPrefix)
+					.onChange(async (value) => {
+						this.settings.settings.imageUrlPrefix = value;
+						await this.checkConnectionAndSaveSettings();
+					}),
+			);
+	}
+
+	private initializeWorkflowSetting() {
+		new Setting(this.settingsRootElement)
+			.setName("部署工作流文件名")
+			.setDesc(
+				"发布后自动触发的 GitHub Actions 工作流文件名（如 deploy.yml），留空则不触发",
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("deploy.yml")
+					.setValue(this.settings.settings.workflowFileName)
+					.onChange(async (value) => {
+						this.settings.settings.workflowFileName = value;
 						await this.checkConnectionAndSaveSettings();
 					}),
 			);

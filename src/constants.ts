@@ -1,6 +1,6 @@
-export const IMAGE_PATH_BASE = "src/site/img/user/";
+export const DEFAULT_IMAGE_PATH = "src/site/img/user/";
 
-export const VAULT_IMAGE_PATH_PREFIX = "/img/user/";
+export const DEFAULT_IMAGE_URL_PREFIX = "/img/user/";
 
 export const DEFAULT_NOTE_PATH_BASE = "src/content/";
 

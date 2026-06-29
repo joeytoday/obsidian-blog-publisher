@@ -2,20 +2,14 @@ import { Octokit } from "@octokit/core";
 import Logger from "js-logger";
 import { IPublishPlatformConnection } from "../models/IPublishPlatformConnection";
 import { PublishPlatform } from "../models/PublishPlatform";
-import DigitalGardenSettings from "../models/settings";
+import BlogPublisherSettings from "../models/settings";
+import { DEFAULT_IMAGE_PATH, DEFAULT_IMAGE_URL_PREFIX } from "../constants";
 
 const oktokitLogger = Logger.get("octokit");
 
 export default class PublishPlatformConnectionFactory {
-	static createBaseGardenConnection(): IPublishPlatformConnection {
-		return {
-			octoKit: new Octokit({ log: oktokitLogger }),
-			userName: "oleeskild",
-			pageName: "digitalgarden",
-		};
-	}
 	static async createPublishPlatformConnection(
-		settings: DigitalGardenSettings,
+		settings: BlogPublisherSettings,
 	): Promise<IPublishPlatformConnection> {
 		if (settings.publishPlatform === PublishPlatform.SelfHosted) {
 			return {
@@ -25,6 +19,8 @@ export default class PublishPlatformConnectionFactory {
 				}),
 				userName: settings.githubUserName,
 				pageName: settings.githubRepo,
+				imagePath: settings.imagePath || DEFAULT_IMAGE_PATH,
+				imageUrlPrefix: settings.imageUrlPrefix || DEFAULT_IMAGE_URL_PREFIX,
 			};
 		} else {
 			throw new Error("Publish platform not supported");

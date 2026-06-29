@@ -9,7 +9,7 @@ export class PublishStatusBar {
 		this.counter = 0;
 		this.numberOfNotesToPublish = numberOfNotesToPublish;
 
-		this.statusBarItem.createEl("span", { text: "Digital Garden: " });
+		this.statusBarItem.createEl("span", { text: "Blog Publisher: " });
 
 		this.status = this.statusBarItem.createEl("span", {
 			text: `${this.numberOfNotesToPublish} files marked for publishing`,
