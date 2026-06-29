@@ -45,9 +45,7 @@ describe("ObsidianFrontMatterEngine", () => {
 			engine.set("value", null);
 			await engine.apply();
 
-			expect(extractFrontMatter(capture.content)).toContain(
-				"value: null",
-			);
+			expect(extractFrontMatter(capture.content)).toContain("value: null");
 		});
 
 		it("formats booleans", async () => {

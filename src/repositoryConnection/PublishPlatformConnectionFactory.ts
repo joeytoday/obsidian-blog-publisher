@@ -1,8 +1,8 @@
 import { Octokit } from "@octokit/core";
 import Logger from "js-logger";
-import { IPublishPlatformConnection } from "src/models/IPublishPlatformConnection";
-import { PublishPlatform } from "src/models/PublishPlatform";
-import DigitalGardenSettings from "src/models/settings";
+import { IPublishPlatformConnection } from "../models/IPublishPlatformConnection";
+import { PublishPlatform } from "../models/PublishPlatform";
+import DigitalGardenSettings from "../models/settings";
 
 const oktokitLogger = Logger.get("octokit");
 

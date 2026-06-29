@@ -2,10 +2,10 @@ import { Notice, Plugin, Workspace, addIcon } from "obsidian";
 import Publisher from "./src/publisher/Publisher";
 import DigitalGardenSettings from "./src/models/settings";
 import { PublishStatusBar } from "./src/views/PublishStatusBar";
-import { seedling } from "src/ui/suggest/constants";
-import { PublicationCenter } from "src/views/PublicationCenter/PublicationCenter";
-import PublishStatusManager from "src/publisher/PublishStatusManager";
-import DigitalGardenSiteManager from "src/repositoryConnection/DigitalGardenSiteManager";
+import { seedling } from "./src/ui/suggest/constants";
+import { PublicationCenter } from "./src/views/PublicationCenter/PublicationCenter";
+import PublishStatusManager from "./src/publisher/PublishStatusManager";
+import DigitalGardenSiteManager from "./src/repositoryConnection/DigitalGardenSiteManager";
 import { DigitalGardenSettingTab } from "./src/views/DigitalGardenSettingTab";
 import Logger from "js-logger";
 import { PublishFile } from "./src/publishFile/PublishFile";
@@ -48,9 +48,7 @@ export default class DigitalGarden extends Plugin {
 
 		this.settings.logLevel && Logger.setLevel(this.settings.logLevel);
 
-		Logger.info(
-			"Digital garden log level set to " + Logger.getLevel().name,
-		);
+		Logger.info("Digital garden log level set to " + Logger.getLevel().name);
 
 		this.addSettingTab(new DigitalGardenSettingTab(this.app, this));
 		await this.addCommands();
@@ -253,20 +251,14 @@ export default class DigitalGarden extends Plugin {
 			}
 
 			if (activeFile.extension !== "md") {
-				new Notice(
-					"当前文件不是 Markdown 文件，请先打开 Markdown 文件。",
-				);
+				new Notice("当前文件不是 Markdown 文件，请先打开 Markdown 文件。");
 
 				return false;
 			}
 
 			new Notice("正在发布笔记...");
 
-			const publisher = new Publisher(
-				vault,
-				metadataCache,
-				this.settings,
-			);
+			const publisher = new Publisher(vault, metadataCache, this.settings);
 			publisher.validateSettings();
 
 			const publishFile = await new PublishFile({
@@ -309,11 +301,7 @@ export default class DigitalGarden extends Plugin {
 			new Notice("正在处理要发布的文件...");
 			const { vault, metadataCache } = this.app;
 
-			const publisher = new Publisher(
-				vault,
-				metadataCache,
-				this.settings,
-			);
+			const publisher = new Publisher(vault, metadataCache, this.settings);
 			publisher.validateSettings();
 
 			const siteManager = new DigitalGardenSiteManager(
@@ -335,9 +323,7 @@ export default class DigitalGarden extends Plugin {
 			const imagesToDelete = publishStatus.deletedImagePaths;
 
 			const totalItems =
-				filesToPublish.length +
-				filesToDelete.length +
-				imagesToDelete.length;
+				filesToPublish.length + filesToDelete.length + imagesToDelete.length;
 
 			if (totalItems === 0) {
 				new Notice("所有内容已是最新状态！");
@@ -347,9 +333,7 @@ export default class DigitalGarden extends Plugin {
 
 			const statusBar = new PublishStatusBar(
 				statusBarItem,
-				filesToPublish.length +
-					filesToDelete.length +
-					imagesToDelete.length,
+				filesToPublish.length + filesToDelete.length + imagesToDelete.length,
 			);
 
 			new Notice(
@@ -366,10 +350,7 @@ export default class DigitalGarden extends Plugin {
 			const notePathsToDelete = filesToDelete.map((f) => f.path);
 			const imagePathsToDelete = imagesToDelete.map((i) => i.path);
 
-			const allPathsToDelete = [
-				...notePathsToDelete,
-				...imagePathsToDelete,
-			];
+			const allPathsToDelete = [...notePathsToDelete, ...imagePathsToDelete];
 
 			if (allPathsToDelete.length > 0) {
 				await publisher.deleteBatch(allPathsToDelete);

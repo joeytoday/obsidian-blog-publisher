@@ -5,13 +5,13 @@ import {
 	getGardenPathForNote,
 	stripVaultImagePrefix,
 	shouldSkipUnchangedImage,
+	PathRewriteRules,
 } from "../utils/utils";
 import {
 	hasPublishFlag,
 	isPublishFrontmatterValid,
 } from "../publishFile/Validator";
 import DigitalGardenSiteManager, {
-	PathRewriteRules,
 	getNotePathBase,
 } from "../repositoryConnection/DigitalGardenSiteManager";
 import DigitalGardenSettings from "../models/settings";
@@ -19,7 +19,7 @@ import { CompiledPublishFile, PublishFile } from "../publishFile/PublishFile";
 import { Assets, GardenPageCompiler } from "../compiler/GardenPageCompiler";
 import Logger from "js-logger";
 import { RepositoryConnection } from "../repositoryConnection/RepositoryConnection";
-import PublishPlatformConnectionFactory from "src/repositoryConnection/PublishPlatformConnectionFactory";
+import PublishPlatformConnectionFactory from "../repositoryConnection/PublishPlatformConnectionFactory";
 import { IMAGE_PATH_BASE } from "../constants";
 
 export interface MarkedForPublishing {
@@ -47,11 +47,8 @@ export default class Publisher {
 		this.settings = settings;
 		this.rewriteRules = getRewriteRules(settings.pathRewriteRules);
 
-		this.compiler = new GardenPageCompiler(
-			vault,
-			settings,
-			metadataCache,
-			() => this.getFilesMarkedForPublishing(),
+		this.compiler = new GardenPageCompiler(vault, settings, metadataCache, () =>
+			this.getFilesMarkedForPublishing(),
 		);
 	}
 
@@ -249,11 +246,7 @@ export default class Publisher {
 	) {
 		for (const image of assets.images) {
 			if (
-				shouldSkipUnchangedImage(
-					image.path,
-					image.localHash,
-					remoteImageHashes,
-				)
+				shouldSkipUnchangedImage(image.path, image.localHash, remoteImageHashes)
 			) {
 				Logger.debug(`Skipping unchanged image: ${image.path}`);
 				continue;

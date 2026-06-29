@@ -80,10 +80,7 @@ export class TemplateUpdateChecker {
 		for (const file of pluginInfo.filesToModify) {
 			const currentFile = this.getFileInfoFromContent(userFileList, file);
 
-			const baseFile = this.getFileInfoFromContent(
-				baseGardenFileList,
-				file,
-			);
+			const baseFile = this.getFileInfoFromContent(baseGardenFileList, file);
 
 			if (!currentFile || currentFile?.sha !== baseFile?.sha) {
 				filesToUpdate.push({ path: file, sha: currentFile?.sha });
@@ -111,13 +108,10 @@ export class TemplateUpdateChecker {
 	}
 
 	async getTemplateVersion() {
-		const latestRelease =
-			await this.baseGardenConnection.getLatestRelease();
+		const latestRelease = await this.baseGardenConnection.getLatestRelease();
 
 		if (!latestRelease) {
-			throw new Error(
-				"Unable to get latest release from oleeskild repository",
-			);
+			throw new Error("Unable to get latest release from oleeskild repository");
 		}
 
 		return latestRelease.tag_name;
@@ -206,8 +200,7 @@ export class TemplateUpdateChecker {
 		const pluginInfoResponse =
 			await baseGardenConnection.getFile("plugin-info.json");
 
-		const baseGardenFileList =
-			await baseGardenConnection.getContent("main");
+		const baseGardenFileList = await baseGardenConnection.getContent("main");
 
 		if (!pluginInfoResponse) {
 			throw new Error("Unable to get plugin info");
@@ -259,10 +252,7 @@ export class TemplateUpdater {
 		logger.info("Updating files");
 
 		// todo get unique files (no add without sha then update)
-		await this.addOrUpdateFiles(
-			[...filesToUpdate, ...filesToAdd],
-			branchName,
-		);
+		await this.addOrUpdateFiles([...filesToUpdate, ...filesToAdd], branchName);
 
 		logger.info("Adding files");
 		await this.addOrUpdateFiles(filesToAdd, branchName);
@@ -299,18 +289,12 @@ export class TemplateUpdater {
 			throw new Error("Unable to get latest commit");
 		}
 
-		await this.userGardenConnection.createBranch(
-			branchName,
-			latestCommit.sha,
-		);
+		await this.userGardenConnection.createBranch(branchName, latestCommit.sha);
 
 		return { branchName };
 	}
 
-	private async deleteFiles(
-		filesToDelete: IUpdateFileInfo[],
-		branch: string,
-	) {
+	private async deleteFiles(filesToDelete: IUpdateFileInfo[], branch: string) {
 		for (const file of filesToDelete) {
 			await this.userGardenConnection.deleteFile(file.path, {
 				branch,
@@ -342,8 +326,3 @@ export class TemplateUpdater {
 		}
 	}
 }
-
-export const hasUpdates = (
-	updater: TemplateUpdater | TemplateUpdateChecker,
-): updater is TemplateUpdater =>
-	(updater as TemplateUpdater).filesToChange !== undefined;

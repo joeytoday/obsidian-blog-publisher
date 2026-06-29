@@ -6,13 +6,12 @@ import {
 	Modal,
 	Setting,
 } from "obsidian";
-import DigitalGardenSiteManager from "src/repositoryConnection/DigitalGardenSiteManager";
+import DigitalGardenSiteManager from "../../repositoryConnection/DigitalGardenSiteManager";
 import DigitalGardenSettings from "../../models/settings";
 import { GithubSettings } from "./GithubSettings";
-import RewriteSettings from "./RewriteSettings.svelte";
 import Logger from "js-logger";
-import { PublishPlatform } from "src/models/PublishPlatform";
-import Publisher from "src/publisher/Publisher";
+import { PublishPlatform } from "../../models/PublishPlatform";
+import Publisher from "../../publisher/Publisher";
 
 export default class SettingView {
 	private app: App;
@@ -46,12 +45,6 @@ export default class SettingView {
 		return getIcon(name) ?? document.createElement("span");
 	}
 
-	private reInitializeSettings() {
-		if (this.prModal) {
-			this.initialize(this.prModal);
-		}
-	}
-
 	async initialize(prModal: Modal) {
 		this.prModal = prModal;
 		this.settingsRootElement.empty();
@@ -71,12 +64,9 @@ export default class SettingView {
 		// 发布平台选择（固定为 GitHub 仓库）
 		this.settings.publishPlatform = PublishPlatform.SelfHosted;
 
-		const publishPlatformSettings = this.settingsRootElement.createEl(
-			"div",
-			{
-				cls: "connection-status",
-			},
-		);
+		const publishPlatformSettings = this.settingsRootElement.createEl("div", {
+			cls: "connection-status",
+		});
 
 		this.initializePublishPlatformSettings(publishPlatformSettings);
 
@@ -92,9 +82,10 @@ export default class SettingView {
 				"每行一条规则，格式：原始路径:目标路径。用于将本地文件夹结构映射到发布后的结构",
 			)
 			.addTextArea((text) => {
-				text.setPlaceholder(
-					"例如：1-projects/:blog/\nPath Rewriting/Subfolder2:fun-folder",
-				)
+				text
+					.setPlaceholder(
+						"例如：1-projects/:blog/\nPath Rewriting/Subfolder2:fun-folder",
+					)
 					.setValue(this.settings.pathRewriteRules)
 					.onChange(async (value) => {
 						this.settings.pathRewriteRules = value;
@@ -164,9 +155,7 @@ export default class SettingView {
 				toggle
 					.setValue(this.settings.logLevel === Logger.DEBUG)
 					.onChange(async (value) => {
-						this.settings.logLevel = value
-							? Logger.DEBUG
-							: undefined;
+						this.settings.logLevel = value ? Logger.DEBUG : undefined;
 						Logger.setLevel(value ? Logger.DEBUG : Logger.WARN);
 						await this.saveSettings();
 					});
@@ -189,46 +178,12 @@ export default class SettingView {
 		}
 	}
 
-	private openPathRewriteRulesModal() {
-		const modal = new Modal(this.app);
-		modal.titleEl.createEl("h2", { text: "路径改写规则" });
-
-		const description = modal.contentEl.createEl("p");
-
-		description.innerHTML = `
-			<p>定义发布时笔记路径的改写规则。每行一条规则，格式为：</p>
-			<code>源路径:目标路径</code>
-			<p>例如：<code>notes:content</code> 会将所有 <code>notes/</code> 下的文件发布到 <code>content/</code> 下</p>
-		`;
-
-		new RewriteSettings({
-			target: modal.contentEl,
-			props: {
-				settings: this.settings,
-				publisher: this.publisher,
-				closeModal: () => modal.close(),
-			},
-		});
-
-		new Setting(modal.contentEl).addButton((btn) =>
-			btn
-				.setButtonText("关闭")
-				.setCta()
-				.onClick(() => modal.close()),
-		);
-
-		modal.open();
-	}
-
 	async saveSiteSettingsAndUpdateEnv(
 		metadataCache: MetadataCache,
 		settings: DigitalGardenSettings,
 		saveSettings: () => Promise<void>,
 	) {
-		const siteManager = new DigitalGardenSiteManager(
-			metadataCache,
-			settings,
-		);
+		const siteManager = new DigitalGardenSiteManager(metadataCache, settings);
 		await siteManager.updateEnv();
 		await saveSettings();
 	}

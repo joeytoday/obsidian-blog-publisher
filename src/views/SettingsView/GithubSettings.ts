@@ -17,10 +17,9 @@ export class GithubSettings {
 		this.settingsRootElement.classList.add("settings-tab-content");
 		this.connectionStatus = "loading";
 
-		this.connectionStatusElement = this.settingsRootElement.createEl(
-			"span",
-			{ cls: "connection-status" },
-		);
+		this.connectionStatusElement = this.settingsRootElement.createEl("span", {
+			cls: "connection-status",
+		});
 		this.initializeHeader();
 		this.initializeGitHubRepoSetting();
 		this.initializeGitHubUserNameSetting();
@@ -46,8 +45,7 @@ export class GithubSettings {
 	};
 
 	updateConnectionStatus = async () => {
-		const { githubToken, githubUserName, githubRepo } =
-			this.settings.settings;
+		const { githubToken, githubUserName, githubRepo } = this.settings.settings;
 
 		if (!githubToken || !githubUserName || !githubRepo) {
 			this.setConnectionError("请填写所有必填项");
@@ -62,10 +60,10 @@ export class GithubSettings {
 		const octokit = new Octokit({ auth: githubToken });
 
 		try {
-			const repoResponse = await octokit.request(
-				"GET /repos/{owner}/{repo}",
-				{ owner: githubUserName, repo: githubRepo },
-			);
+			const repoResponse = await octokit.request("GET /repos/{owner}/{repo}", {
+				owner: githubUserName,
+				repo: githubRepo,
+			});
 
 			const hasWriteAccess = this.checkWritePermissions(
 				repoResponse.data.permissions,
@@ -133,9 +131,7 @@ export class GithubSettings {
 			404: `未找到仓库 '${userName}/${repo}'，请检查用户名和仓库名，或确保令牌具有仓库访问权限。`,
 		};
 
-		this.setConnectionError(
-			errorMessages[status] || `连接失败 (${status})`,
-		);
+		this.setConnectionError(errorMessages[status] || `连接失败 (${status})`);
 	}
 
 	private setConnectionSuccess(message: string): void {
@@ -239,7 +235,8 @@ export class GithubSettings {
 			.addText((text) => {
 				text.inputEl.setAttribute("type", "password");
 
-				text.setPlaceholder("ghp_xxxxxxxxxxxx")
+				text
+					.setPlaceholder("ghp_xxxxxxxxxxxx")
 					.setValue(this.settings.settings.githubToken)
 					.onChange(async (value) => {
 						this.settings.settings.githubToken = value;
@@ -251,17 +248,13 @@ export class GithubSettings {
 	private initializeContentBasePathSetting() {
 		new Setting(this.settingsRootElement)
 			.setName("内容发布路径")
-			.setDesc(
-				`笔记在仓库中的发布路径，默认为：${DEFAULT_NOTE_PATH_BASE}`,
-			)
+			.setDesc(`笔记在仓库中的发布路径，默认为：${DEFAULT_NOTE_PATH_BASE}`)
 			.addText((text) =>
 				text
 					.setPlaceholder(DEFAULT_NOTE_PATH_BASE)
 					.setValue(this.settings.settings.contentBasePath)
 					.onChange(async (value) => {
-						const normalizedPath = value.endsWith("/")
-							? value
-							: value + "/";
+						const normalizedPath = value.endsWith("/") ? value : value + "/";
 						this.settings.settings.contentBasePath = normalizedPath;
 						await this.checkConnectionAndSaveSettings();
 					}),

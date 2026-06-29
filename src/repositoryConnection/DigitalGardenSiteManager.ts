@@ -1,10 +1,11 @@
-import type DigitalGardenSettings from "src/models/settings";
+import type DigitalGardenSettings from "../models/settings";
 import { type MetadataCache, Notice, type TFile } from "obsidian";
 import {
 	extractBaseUrl,
 	generateUrlPath,
 	getGardenPathForNote,
 	getRewriteRules,
+	PathRewriteRules,
 } from "../utils/utils";
 import { Base64 } from "js-base64";
 import {
@@ -29,12 +30,6 @@ const logger = Logger.get("digital-garden-site-manager");
 export function getNotePathBase(settings: DigitalGardenSettings): string {
 	return settings.contentBasePath || DEFAULT_NOTE_PATH_BASE;
 }
-
-export interface PathRewriteRule {
-	from: string;
-	to: string;
-}
-export type PathRewriteRules = PathRewriteRule[];
 
 type ContentTreeItem = {
 	path: string;

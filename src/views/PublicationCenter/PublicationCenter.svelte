@@ -5,11 +5,11 @@
 		IPublishStatusManager,
 		PublishStatus,
 	} from "../../publisher/PublishStatusManager";
-	import TreeView from "src/ui/TreeView/TreeView.svelte";
+	import TreeView from "../../ui/TreeView/TreeView.svelte";
 	import { onMount } from "svelte";
-	import Publisher from "src/publisher/Publisher";
+	import Publisher from "../../publisher/Publisher";
 	import Icon from "../../ui/Icon.svelte";
-	import { CompiledPublishFile } from "src/publishFile/PublishFile";
+	import { CompiledPublishFile } from "../../publishFile/PublishFile";
 	import { getErrorMessage } from "../../utils/utils";
 	export let publishStatusManager: IPublishStatusManager;
 	export let publisher: Publisher;
@@ -43,9 +43,7 @@
 				currentNode.children = [];
 			}
 
-			let childNode = currentNode.children.find(
-				(child) => child.name === part,
-			);
+			let childNode = currentNode.children.find((child) => child.name === part);
 
 			if (!childNode) {
 				childNode = {
@@ -194,12 +192,9 @@
 		showPublishingView = true;
 
 		try {
-			const allNotesToPublish =
-				unpublishedToPublish.concat(changedToPublish);
+			const allNotesToPublish = unpublishedToPublish.concat(changedToPublish);
 
-			processingPaths = [
-				...allNotesToPublish.map((note) => note.getPath()),
-			];
+			processingPaths = [...allNotesToPublish.map((note) => note.getPath())];
 			await publisher.publishBatch(allNotesToPublish);
 
 			publishedPaths = [...processingPaths];
@@ -300,10 +295,7 @@
 					</div>
 				{/if}
 				<div class="loading-container">
-					<div
-						class="loading-bar"
-						style="width: {publishProgress}%"
-					/>
+					<div class="loading-bar" style="width: {publishProgress}%" />
 				</div>
 			</div>
 

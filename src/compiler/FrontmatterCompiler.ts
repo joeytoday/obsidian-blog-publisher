@@ -4,9 +4,9 @@ import {
 	sanitizePermalink,
 	generateUrlPath,
 	getRewriteRules,
+	PathRewriteRules,
 } from "../utils/utils";
 import DigitalGardenSettings from "../models/settings";
-import { PathRewriteRules } from "../repositoryConnection/DigitalGardenSiteManager";
 import { PublishFile } from "../publishFile/PublishFile";
 
 export type TFrontmatter = Record<string, unknown> & {
@@ -15,7 +15,7 @@ export type TFrontmatter = Record<string, unknown> & {
 	tags?: string;
 };
 
-export type TPublishedFrontMatter = Record<string, unknown> & {
+type TPublishedFrontMatter = Record<string, unknown> & {
 	tags?: string[];
 	permalink?: string;
 };
@@ -76,8 +76,7 @@ export class FrontmatterCompiler {
 		}
 
 		if (baseFrontMatter && baseFrontMatter["dg-permalink"]) {
-			publishedFrontMatter["dg-permalink"] =
-				baseFrontMatter["dg-permalink"];
+			publishedFrontMatter["dg-permalink"] = baseFrontMatter["dg-permalink"];
 
 			publishedFrontMatter["permalink"] = sanitizePermalink(
 				baseFrontMatter["dg-permalink"],

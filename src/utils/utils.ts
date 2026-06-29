@@ -2,10 +2,16 @@ import { Base64 } from "js-base64";
 import slugify from "@sindresorhus/slugify";
 import sha1 from "crypto-js/sha1";
 import Latin1 from "crypto-js/enc-latin1";
-import { PathRewriteRules } from "../repositoryConnection/DigitalGardenSiteManager";
 import { VAULT_IMAGE_PATH_PREFIX } from "../constants";
 
 const REWRITE_RULE_DELIMITER = ":";
+
+export interface PathRewriteRule {
+	from: string;
+	to: string;
+}
+
+export type PathRewriteRules = PathRewriteRule[];
 
 function getErrorMessage(e: unknown): string {
 	return e instanceof Error ? e.message : String(e);
@@ -44,8 +50,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer) {
 
 function extractBaseUrl(url: string) {
 	return (
-		url &&
-		url.replace("https://", "").replace("http://", "").replace(/\/$/, "")
+		url && url.replace("https://", "").replace("http://", "").replace(/\/$/, "")
 	);
 }
 
