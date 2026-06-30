@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0 (2026-06-30)
+
+- 发布后的 YAML 改为标准格式（不再是 JSON）
+- 透传所有原始 frontmatter 字段（description、publishDate、title 等）
+- 新增 blog-path 字段（笔记在博客仓库中的路径）
+- 移除部署工作流触发设置（git push 已自动触发 on:push 工作流）
+
 ## 1.2.9 (2026-06-29)
 
 - README 翻译为英文，符合 Obsidian 插件目录要求
