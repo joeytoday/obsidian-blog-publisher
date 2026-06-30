@@ -32,7 +32,6 @@ export class FrontmatterCompiler {
 		delete fileFrontMatter["position"];
 
 		let publishedFrontMatter: TPublishedFrontMatter = {
-			...fileFrontMatter,
 			"pub-blog": true,
 		};
 
@@ -45,6 +44,11 @@ export class FrontmatterCompiler {
 		publishedFrontMatter = this.addBlogPath(
 			publishedFrontMatter,
 			file.getPath(),
+		);
+
+		publishedFrontMatter = this.addSelectedFields(
+			fileFrontMatter,
+			publishedFrontMatter,
 		);
 
 		publishedFrontMatter = this.addPageTags(
@@ -82,6 +86,21 @@ export class FrontmatterCompiler {
 		const publishedFrontMatter = { ...newFrontMatter };
 		const rewrittenPath = getRewrittenPath(filePath, this.rewriteRules);
 		publishedFrontMatter["blog-path"] = rewrittenPath;
+
+		return publishedFrontMatter;
+	}
+
+	private addSelectedFields(
+		baseFrontMatter: TFrontmatter,
+		newFrontMatter: TPublishedFrontMatter,
+	) {
+		const publishedFrontMatter = { ...newFrontMatter };
+
+		for (const key of ["title", "description", "publishDate"]) {
+			if (baseFrontMatter[key] !== undefined) {
+				publishedFrontMatter[key] = baseFrontMatter[key];
+			}
+		}
 
 		return publishedFrontMatter;
 	}
