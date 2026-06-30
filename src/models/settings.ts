@@ -34,12 +34,6 @@ export default interface BlogPublisherSettings {
 
 	publishPlatform: PublishPlatform;
 
-	/**
-	 * GitHub Actions workflow filename (e.g. "deploy.yml") to trigger after publishing.
-	 * Empty string means no workflow trigger.
-	 */
-	workflowFileName: string;
-
 	ENABLE_DEVELOPER_TOOLS?: boolean;
 	devPluginPath?: string;
 	logLevel?: ILogLevel;

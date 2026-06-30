@@ -5,6 +5,7 @@ import {
 	getRewriteRules,
 	PathRewriteRules,
 } from "../utils/utils";
+import { frontMatterToYaml } from "../utils/yaml";
 import BlogPublisherSettings from "../models/settings";
 import { PublishFile } from "../publishFile/PublishFile";
 
@@ -31,6 +32,7 @@ export class FrontmatterCompiler {
 		delete fileFrontMatter["position"];
 
 		let publishedFrontMatter: TPublishedFrontMatter = {
+			...fileFrontMatter,
 			"pub-blog": true,
 		};
 
@@ -40,9 +42,9 @@ export class FrontmatterCompiler {
 			file.getPath(),
 		);
 
-		publishedFrontMatter = this.addDefaultPassThrough(
-			fileFrontMatter,
+		publishedFrontMatter = this.addBlogPath(
 			publishedFrontMatter,
+			file.getPath(),
 		);
 
 		publishedFrontMatter = this.addPageTags(
@@ -50,10 +52,11 @@ export class FrontmatterCompiler {
 			publishedFrontMatter,
 		);
 
-		const fullFrontMatter = publishedFrontMatter;
-		const frontMatterString = JSON.stringify(fullFrontMatter);
+		const frontMatterString = frontMatterToYaml(
+			publishedFrontMatter as Record<string, unknown>,
+		);
 
-		return `---\n${frontMatterString}\n---\n`;
+		return `${frontMatterString}\n`;
 	}
 
 	private addPermalink(
@@ -75,17 +78,10 @@ export class FrontmatterCompiler {
 		return publishedFrontMatter;
 	}
 
-	private addDefaultPassThrough(
-		baseFrontMatter: TFrontmatter,
-		newFrontMatter: TPublishedFrontMatter,
-	) {
+	private addBlogPath(newFrontMatter: TPublishedFrontMatter, filePath: string) {
 		const publishedFrontMatter = { ...newFrontMatter };
-
-		if (baseFrontMatter) {
-			if (baseFrontMatter["title"]) {
-				publishedFrontMatter["title"] = baseFrontMatter["title"];
-			}
-		}
+		const rewrittenPath = getRewrittenPath(filePath, this.rewriteRules);
+		publishedFrontMatter["blog-path"] = rewrittenPath;
 
 		return publishedFrontMatter;
 	}

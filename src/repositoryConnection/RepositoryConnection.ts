@@ -446,47 +446,6 @@ export class RepositoryConnection {
 			sha,
 		});
 	}
-
-	/**
-	 * Trigger a GitHub Actions workflow
-	 * @param workflowId - The workflow ID or filename (e.g., 'deploy.yml')
-	 * @param branch - The branch to run the workflow on (default: 'main')
-	 * @param inputs - Optional inputs to pass to the workflow
-	 */
-	async triggerWorkflow(
-		workflowId: string,
-		branch: string = "main",
-		inputs?: Record<string, string>,
-	): Promise<boolean> {
-		try {
-			const response = await this.octokit.request(
-				"POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches",
-				{
-					...this.getBasePayload(),
-					workflow_id: workflowId,
-					ref: branch,
-					inputs: inputs || {},
-				},
-			);
-
-			if (response.status === 204) {
-				logger.info(
-					`Successfully triggered workflow ${workflowId} on ${branch}`,
-				);
-
-				return true;
-			}
-
-			return false;
-		} catch (error) {
-			logger.error(
-				`Failed to trigger workflow ${workflowId}:`,
-				error instanceof Error ? error.message : String(error),
-			);
-
-			return false;
-		}
-	}
 }
 
 export type TRepositoryContent = Awaited<

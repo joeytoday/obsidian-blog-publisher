@@ -110,22 +110,4 @@ export default class SiteManager {
 
 		return hashes;
 	}
-
-	async triggerWorkflow(): Promise<void> {
-		if (!this.settings.workflowFileName) {
-			return;
-		}
-
-		const connection = await this.getUserConnection();
-		const repoInfo = await connection.getRepositoryInfo();
-
-		if (!repoInfo?.default_branch) {
-			return;
-		}
-
-		await connection.triggerWorkflow(
-			this.settings.workflowFileName,
-			repoInfo.default_branch,
-		);
-	}
 }

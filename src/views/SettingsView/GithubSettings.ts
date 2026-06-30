@@ -31,7 +31,6 @@ export class GithubSettings {
 		this.initializeContentBasePathSetting();
 		this.initializeImagePathSetting();
 		this.initializeImageUrlPrefixSetting();
-		this.initializeWorkflowSetting();
 	}
 
 	initializeHeader = () => {
@@ -296,23 +295,6 @@ export class GithubSettings {
 					.setValue(this.settings.settings.imageUrlPrefix)
 					.onChange(async (value) => {
 						this.settings.settings.imageUrlPrefix = value;
-						await this.checkConnectionAndSaveSettings();
-					}),
-			);
-	}
-
-	private initializeWorkflowSetting() {
-		new Setting(this.settingsRootElement)
-			.setName("部署工作流文件名")
-			.setDesc(
-				"发布后自动触发的 GitHub Actions 工作流文件名（如 deploy.yml），留空则不触发",
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder("deploy.yml")
-					.setValue(this.settings.settings.workflowFileName)
-					.onChange(async (value) => {
-						this.settings.settings.workflowFileName = value;
 						await this.checkConnectionAndSaveSettings();
 					}),
 			);

@@ -36,7 +36,6 @@ const DEFAULT_SETTINGS: BlogPublisherSettings = {
 	pathRewriteRules: "",
 	publishPlatform:
 		"SelfHosted" as unknown as BlogPublisherSettings["publishPlatform"],
-	workflowFileName: "",
 	logLevel: undefined,
 };
 
@@ -312,17 +311,6 @@ export default class BlogPublisher extends Plugin {
 
 			if (publishSuccessful) {
 				new Notice("笔记发布成功！");
-
-				if (this.settings.workflowFileName) {
-					try {
-						const siteManager = new SiteManager(metadataCache, this.settings);
-						await siteManager.triggerWorkflow();
-						new Notice("已触发部署工作流。");
-					} catch (e) {
-						console.error(getErrorMessage(e));
-						new Notice("触发部署工作流失败。");
-					}
-				}
 			}
 
 			return publishSuccessful;
@@ -417,16 +405,6 @@ export default class BlogPublisher extends Plugin {
 
 			if (imagesToDelete.length > 0) {
 				new Notice(`成功删除 ${imagesToDelete.length} 张图片！`);
-			}
-
-			if (this.settings.workflowFileName) {
-				try {
-					await siteManager.triggerWorkflow();
-					new Notice("已触发部署工作流。");
-				} catch (e) {
-					console.error(getErrorMessage(e));
-					new Notice("触发部署工作流失败。");
-				}
 			}
 		} catch (e) {
 			const msg = getErrorMessage(e);
