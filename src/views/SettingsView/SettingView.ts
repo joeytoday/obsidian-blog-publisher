@@ -122,6 +122,87 @@ export default class SettingView {
 			cls: "setting-item-description bp-path-rewrite-tip",
 		});
 
+		// 状态跟踪设置
+		this.settingsRootElement
+			.createEl("h3", { text: "状态跟踪" })
+			.prepend(this.getIcon("toggle-left"));
+
+		new Setting(this.settingsRootElement)
+			.setName("启用状态跟踪")
+			.setDesc(
+				"启用后，在 pub-blog: true 的基础上，用 status 字段控制发布中心的状态分类。status 为「待发布值」时检查是否有改动，为「已发布值」时跳过检查直接显示为已发布。适合小修改后不想重复推送的场景。",
+			)
+			.addToggle((toggle) => {
+				toggle
+					.setValue(this.settings.statusTrackingEnabled)
+					.onChange(async (value) => {
+						this.settings.statusTrackingEnabled = value;
+						await this.saveSettings();
+						this.initialize();
+					});
+			});
+
+		if (this.settings.statusTrackingEnabled) {
+			new Setting(this.settingsRootElement)
+				.setName("状态属性名")
+				.setDesc("用于状态跟踪的 frontmatter 属性名。")
+				.addText((text) => {
+					text
+						.setPlaceholder("status")
+						.setValue(this.settings.statusFieldName)
+						.onChange(async (value) => {
+							this.settings.statusFieldName = value || "status";
+							await this.saveSettings();
+						});
+				});
+
+			new Setting(this.settingsRootElement)
+				.setName("待发布状态值")
+				.setDesc(
+					"status 为此值时，发布中心检查远程内容判断是未发布还是有改动。",
+				)
+				.addText((text) => {
+					text
+						.setPlaceholder("ongoing")
+						.setValue(this.settings.trackStatusValue)
+						.onChange(async (value) => {
+							this.settings.trackStatusValue = value;
+							await this.saveSettings();
+						});
+				});
+
+			new Setting(this.settingsRootElement)
+				.setName("已发布状态值")
+				.setDesc(
+					"status 为此值时，跳过远程内容检查，直接显示为已发布。适合小修改后不想重复推送的情况。",
+				)
+				.addText((text) => {
+					text
+						.setPlaceholder("done")
+						.setValue(this.settings.publishedStatusValue)
+						.onChange(async (value) => {
+							this.settings.publishedStatusValue = value;
+							await this.saveSettings();
+						});
+				});
+
+			const statusExample = this.settingsRootElement.createEl("div", {
+				cls: "setting-item-description",
+			});
+			statusExample.addClass("bp-status-example");
+
+			statusExample.createEl("div", {
+				text: "📋 示例 frontmatter：",
+				cls: "setting-item-name",
+			});
+
+			const codeBlock = statusExample.createEl("pre");
+
+			codeBlock.createEl("code", {
+				text: `---\npub-blog: true\n${this.settings.statusFieldName}: ${this.settings.trackStatusValue}  # 检查改动，需要时重新发布\n---\n\n---\npub-blog: true\n${this.settings.statusFieldName}: ${this.settings.publishedStatusValue}  # 跳过检查，显示为已发布\n---`,
+			});
+		}
+
 		// 调试日志
 		this.settingsRootElement
 			.createEl("h3", { text: "高级" })

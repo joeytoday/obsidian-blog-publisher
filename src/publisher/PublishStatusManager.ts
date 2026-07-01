@@ -84,8 +84,14 @@ export default class PublishStatusManager implements IPublishStatusManager {
 			this.publisher.settings.pathRewriteRules,
 		);
 
+		// 状态跟踪配置
+		const statusTrackingEnabled = this.publisher.settings.statusTrackingEnabled;
+		const statusFieldName = this.publisher.settings.statusFieldName;
+		const trackValue = this.publisher.settings.trackStatusValue;
+		const publishedValue = this.publisher.settings.publishedStatusValue;
+
 		// 处理发布状态判断
-		// 只检测 pub-blog=true 的文件
+		// marked.notes 已通过 pub-blog: true 筛选，这里根据状态字段细分发布状态
 		for (const file of marked.notes) {
 			const compiledFile = await file.compile();
 			const [content] = compiledFile.getCompiledFile();
@@ -94,42 +100,68 @@ export default class PublishStatusManager implements IPublishStatusManager {
 			// 获取文件的 frontmatter 信息
 			const frontmatter = file.getFrontmatter();
 
-			// 支持字符串和数组格式的 status
-			const status = Array.isArray(frontmatter?.status)
-				? frontmatter.status[0]
-				: frontmatter?.status;
+			// 支持字符串和数组格式的状态值
+			const rawStatus = statusTrackingEnabled
+				? frontmatter?.[statusFieldName]
+				: frontmatter?.["status"];
+
+			const status = Array.isArray(rawStatus) ? rawStatus[0] : rawStatus;
 
 			// 使用重写后的路径查找远程文件
 			const rewrittenPath = getRewrittenPath(file.getPath(), rewriteRules);
 			const remoteHash = remoteNoteHashes[rewrittenPath];
 			const fileFound = remoteHash !== undefined;
 
-			// 根据 status 属性判断发布状态
-			if (status === "🟡 Ongoing" || status === "🟡Ongoing") {
-				// 🟡 Ongoing 状态：检测远程状态
-				// 远程有文件 → Changed（表示修改过需要重新发布）
-				// 远程没有文件 → Unpublished（表示新文件）
-				if (fileFound) {
-					compiledFile.setRemoteHash(remoteHash);
-					changedNotes.push(compiledFile);
-				} else {
-					unpublishedNotes.push(compiledFile);
-				}
-			} else if (status === "🟢 Done" || status === "🟢Done") {
-				// 🟢 Done 状态：表示已发布完成，始终显示在 Published 中
-				publishedNotes.push(compiledFile);
-			} else {
-				// 其他状态（或无 status）：使用默认逻辑检测
-				if (fileFound) {
-					compiledFile.setRemoteHash(remoteHash);
-
-					if (remoteHash === localHash) {
-						publishedNotes.push(compiledFile);
-					} else {
+			if (statusTrackingEnabled) {
+				// 状态跟踪模式：使用可配置的状态值
+				if (status === trackValue) {
+					// 跟踪状态：检测远程状态
+					if (fileFound) {
+						compiledFile.setRemoteHash(remoteHash);
 						changedNotes.push(compiledFile);
+					} else {
+						unpublishedNotes.push(compiledFile);
 					}
+				} else if (status === publishedValue) {
+					// 已发布状态：始终显示在 Published 中
+					publishedNotes.push(compiledFile);
 				} else {
-					unpublishedNotes.push(compiledFile);
+					// 其他状态：使用默认逻辑检测
+					if (fileFound) {
+						compiledFile.setRemoteHash(remoteHash);
+
+						if (remoteHash === localHash) {
+							publishedNotes.push(compiledFile);
+						} else {
+							changedNotes.push(compiledFile);
+						}
+					} else {
+						unpublishedNotes.push(compiledFile);
+					}
+				}
+			} else {
+				// 默认模式：使用硬编码状态值（兼容旧版本）
+				if (status === "🟡 Ongoing" || status === "🟡Ongoing") {
+					if (fileFound) {
+						compiledFile.setRemoteHash(remoteHash);
+						changedNotes.push(compiledFile);
+					} else {
+						unpublishedNotes.push(compiledFile);
+					}
+				} else if (status === "🟢 Done" || status === "🟢Done") {
+					publishedNotes.push(compiledFile);
+				} else {
+					if (fileFound) {
+						compiledFile.setRemoteHash(remoteHash);
+
+						if (remoteHash === localHash) {
+							publishedNotes.push(compiledFile);
+						} else {
+							changedNotes.push(compiledFile);
+						}
+					} else {
+						unpublishedNotes.push(compiledFile);
+					}
 				}
 			}
 		}

@@ -36,6 +36,10 @@ const DEFAULT_SETTINGS: BlogPublisherSettings = {
 	pathRewriteRules: "",
 	publishPlatform:
 		"SelfHosted" as unknown as BlogPublisherSettings["publishPlatform"],
+	statusTrackingEnabled: false,
+	statusFieldName: "status",
+	trackStatusValue: "ongoing",
+	publishedStatusValue: "done",
 	logLevel: undefined,
 };
 
